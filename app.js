@@ -904,6 +904,13 @@ function renderApp() {
 function bindGlobalActions() {
   let previousScrollY = window.scrollY;
 
+  document.querySelectorAll('.menu-card').forEach((card) => {
+    card.addEventListener('pointerenter', () => card.classList.add('is-hovered'));
+    card.addEventListener('pointerleave', () => card.classList.remove('is-hovered'));
+    card.addEventListener('focus', () => card.classList.add('is-hovered'));
+    card.addEventListener('blur', () => card.classList.remove('is-hovered'));
+  });
+
   const updateSectionHeaders = () => {
     const sections = [...document.querySelectorAll('.section-page')];
     previousScrollY = window.scrollY;

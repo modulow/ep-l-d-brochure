@@ -398,6 +398,18 @@ img { display: block; max-width: 100%; }
   display: flex;
   align-items: flex-end;
   background: #dfeef8;
+  transform-origin: center;
+  scale: 1;
+  transition: scale 0.24s ease, box-shadow 0.24s ease;
+  will-change: scale;
+}
+
+.menu-card:hover,
+.menu-card:focus-visible,
+.menu-card.is-hovered {
+  z-index: 4;
+  scale: 1.08;
+  box-shadow: 0 18px 36px rgba(13, 35, 58, 0.18), inset 0 0 0 1px rgba(13, 78, 167, 0.08);
 }
 
 .menu-card--navy { background: #1c4270; }
