@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Log in | L&D Catalogue 2026</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="login-page">
+    <main class="login-shell">
+      <section class="login-card" aria-labelledby="login-title">
+        <div class="section-label">L&D CATALOGUE 2026</div>
+        <h1 id="login-title">Log in</h1>
+        <form id="login-form">
+          <label for="login-user">Username</label>
+          <input id="login-user" type="text" value="admin" autocomplete="username" required />
+          <label for="login-pass">Password</label>
+          <input id="login-pass" type="password" value="catalogue" autocomplete="current-password" required />
+          <p id="login-error" class="login-error" role="alert" hidden>Invalid credentials.</p>
+          <div class="login-actions">
+            <a class="secondary-btn" href="index.html">Back to catalogue</a>
+            <button class="primary-btn" type="submit">Log in</button>
+          </div>
+        </form>
+      </section>
+    </main>
+    <script>
+      const form = document.getElementById('login-form');
+      const error = document.getElementById('login-error');
+      const params = new URLSearchParams(window.location.search);
+      const returnUrl = params.get('return') || 'index.html';
+
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const user = document.getElementById('login-user').value.trim();
+        const pass = document.getElementById('login-pass').value.trim();
+        if (user !== 'admin' || pass !== 'catalogue') {
+          error.hidden = false;
+          return;
+        }
+        localStorage.setItem('brochure_admin_authenticated', 'true');
+        localStorage.setItem('brochure_last_login', new Date().toISOString());
+        window.location.href = returnUrl;
+      });
+    </script>
+  </body>
+</html>
