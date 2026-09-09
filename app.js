@@ -1163,9 +1163,89 @@ function bindGlobalActions() {
   const pdfExportToggle = document.getElementById('pdf-export-toggle');
   if (pdfExportToggle && pdfExportToggle.dataset.bound !== 'true') {
     pdfExportToggle.dataset.bound = 'true';
+    const pdfModal = document.getElementById('pdf-config-modal');
+    const pdfList = document.getElementById('pdf-section-list');
+    const pdfStatus = document.getElementById('pdf-config-status');
+    const pdfGenerate = document.getElementById('pdf-generate');
+    const pdfSelectAll = document.getElementById('pdf-select-all');
+    const pdfClose = document.getElementById('pdf-config-close');
+    let pdfReady = false;
+
+    const setPdfModalOpen = (isOpen) => {
+      if (!pdfModal) return;
+      pdfModal.hidden = !isOpen;
+      pdfModal.setAttribute('aria-hidden', String(!isOpen));
+      if (isOpen) pdfClose?.focus();
+    };
+
+    const preloadPdfImages = async () => {
+      const imageSources = sectionData.flatMap((section) => [section.heroImage, ...section.items.map((item) => item.image)])
+        .filter(Boolean)
+        .map(safeImage);
+      const uniqueSources = [...new Set(imageSources)];
+      let loaded = 0;
+      await Promise.all(uniqueSources.map((src) => new Promise((resolve) => {
+        const image = new Image();
+        const finish = () => {
+          loaded += 1;
+          if (pdfStatus) pdfStatus.textContent = `Preparing images... ${loaded} / ${uniqueSources.length}`;
+          resolve();
+        };
+        image.onload = finish;
+        image.onerror = finish;
+        image.src = src;
+      })));
+      pdfReady = true;
+      if (pdfGenerate) pdfGenerate.disabled = false;
+      if (pdfStatus) pdfStatus.textContent = 'Ready. Choose the sections to include.';
+    };
+
+    const populatePdfSections = () => {
+      if (!pdfList) return;
+      pdfList.innerHTML = sectionData.map((section) => `
+        <label class="pdf-config-modal__section">
+          <input type="checkbox" value="${section.id}" checked />
+          <span>${section.index}</span>
+          <strong>${section.title}</strong>
+        </label>
+      `).join('');
+    };
+
     pdfExportToggle.addEventListener('click', () => {
-      document.title = 'L&D Catalogue 2026';
-      window.print();
+      populatePdfSections();
+      pdfReady = false;
+      if (pdfGenerate) pdfGenerate.disabled = true;
+      if (pdfStatus) pdfStatus.textContent = 'Preparing images in the background...';
+      setPdfModalOpen(true);
+      preloadPdfImages();
+    });
+
+    pdfSelectAll?.addEventListener('click', () => {
+      const inputs = [...(pdfList?.querySelectorAll('input[type="checkbox"]') || [])];
+      const shouldSelect = inputs.some((input) => !input.checked);
+      inputs.forEach((input) => { input.checked = shouldSelect; });
+      pdfSelectAll.textContent = shouldSelect ? 'Clear all' : 'Select all';
+    });
+
+    pdfClose?.addEventListener('click', () => setPdfModalOpen(false));
+    pdfModal?.addEventListener('click', (event) => {
+      if (event.target === pdfModal) setPdfModalOpen(false);
+    });
+
+    pdfGenerate?.addEventListener('click', () => {
+      if (!pdfReady) return;
+      const selected = [...pdfList.querySelectorAll('input:checked')].map((input) => input.value);
+      document.querySelectorAll('.section-page').forEach((section) => {
+        section.dataset.pdfIncluded = String(selected.includes(section.id));
+      });
+      document.documentElement.classList.add('is-pdf-exporting');
+      setPdfModalOpen(false);
+      window.requestAnimationFrame(() => window.requestAnimationFrame(() => window.print()));
+    });
+
+    window.addEventListener('afterprint', () => {
+      document.documentElement.classList.remove('is-pdf-exporting');
+      document.querySelectorAll('.section-page').forEach((section) => delete section.dataset.pdfIncluded);
     });
   }
 
@@ -1401,6 +1481,27 @@ function bindGlobalActions() {
   let overlayScrollListener;
   let hamburgerHovered = false;
   let searchHovered = false;
+  let hamburgerHoverCloseTimer;
+
+  const closeFloatingModalsOnScroll = () => {
+    const menuList = floatingMenu?.querySelector('.floating-section-menu__list');
+    const searchWasOpen = floatingSearch?.classList.contains('is-open');
+    const menuWasOpen = menuList?.classList.contains('is-open');
+    if (!searchWasOpen && !menuWasOpen) return;
+
+    menuList?.classList.remove('is-open');
+    floatingMenu?.setAttribute('data-clicked-open', 'false');
+    floatingMenu?.querySelector('.floating-section-menu__toggle')?.setAttribute('aria-expanded', 'false');
+    floatingSearch?.classList.remove('is-open');
+    floatingSearch?.setAttribute('data-clicked-open', 'false');
+    floatingSearch?.querySelector('.floating-search__toggle')?.setAttribute('aria-expanded', 'false');
+    hamburgerHovered = false;
+    searchHovered = false;
+    transitionOverlay?.classList.remove('is-active');
+    updateTransitionOverlay();
+  };
+
+  window.addEventListener('scroll', closeFloatingModalsOnScroll, { passive: true });
 
   const updateTransitionOverlay = () => {
     const modalIsOpen = floatingMenu?.querySelector('.section-menu-list.is-open') || floatingSearch?.classList.contains('is-open');
@@ -1447,6 +1548,7 @@ function bindGlobalActions() {
   }
 
   floatingMenu?.addEventListener('mouseenter', () => {
+    window.clearTimeout(hamburgerHoverCloseTimer);
     hamburgerHovered = true;
     const list = floatingMenu.querySelector('.floating-section-menu__list');
     const toggle = floatingMenu.querySelector('.floating-section-menu__toggle');
@@ -1456,12 +1558,14 @@ function bindGlobalActions() {
   });
 
   floatingMenu?.addEventListener('mouseleave', () => {
-    hamburgerHovered = false;
     if (floatingMenu.dataset.clickedOpen !== 'true') {
-      floatingMenu.querySelector('.floating-section-menu__list')?.classList.remove('is-open');
-      floatingMenu.querySelector('.floating-section-menu__toggle')?.setAttribute('aria-expanded', 'false');
+      hamburgerHoverCloseTimer = window.setTimeout(() => {
+        hamburgerHovered = false;
+        floatingMenu.querySelector('.floating-section-menu__list')?.classList.remove('is-open');
+        floatingMenu.querySelector('.floating-section-menu__toggle')?.setAttribute('aria-expanded', 'false');
+        updateTransitionOverlay();
+      }, 500);
     }
-    updateTransitionOverlay();
   });
 
   document.querySelectorAll('[data-target]').forEach((button) => {
@@ -1559,7 +1663,7 @@ function bindGlobalActions() {
         search.classList.remove('is-open');
         toggle?.setAttribute('aria-expanded', 'false');
         updateTransitionOverlay();
-      }, 50);
+      }, 500);
     };
 
     toggle?.addEventListener('mouseenter', () => {

@@ -1186,7 +1186,7 @@ img { display: block; max-width: 100%; }
 .user-pins-panel {
   position: fixed;
   left: 18px;
-  bottom: 120px;
+  bottom: 108px;
   z-index: 2000 !important;
 }
 
@@ -1292,7 +1292,7 @@ img { display: block; max-width: 100%; }
 .pdf-export-toggle {
   position: fixed;
   left: 18px;
-  bottom: 72px;
+  bottom: 61px;
   z-index: 1100;
   min-height: 34px;
   padding: 8px 12px;
@@ -1310,6 +1310,90 @@ img { display: block; max-width: 100%; }
 .pdf-export-toggle:focus-visible {
   background: var(--primary-yellow);
   color: #000000;
+}
+
+.pdf-config-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 5001;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.pdf-config-modal[hidden] {
+  display: none;
+}
+
+.pdf-config-modal__panel {
+  width: min(720px, 100%);
+  max-height: min(760px, calc(100vh - 48px));
+  overflow: auto;
+  padding: 28px;
+  background: #ffffff;
+  border: 2px solid var(--button-blue);
+  box-shadow: 0 20px 50px rgba(13, 35, 58, 0.2);
+}
+
+.pdf-config-modal__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.pdf-config-modal__header h2 {
+  margin: 8px 0 0;
+  color: var(--button-blue);
+  font-size: clamp(1.6rem, 4vw, 2.8rem);
+  line-height: 1;
+}
+
+.pdf-config-modal__status {
+  margin: 20px 0;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.pdf-config-modal__actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.pdf-config-modal__sections {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.pdf-config-modal__section {
+  display: grid;
+  grid-template-columns: 22px 32px 1fr;
+  gap: 10px;
+  align-items: center;
+  min-height: 54px;
+  padding: 10px 12px;
+  background: #f5f7fa;
+  color: var(--deep-blue);
+  cursor: pointer;
+}
+
+.pdf-config-modal__section input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--button-blue);
+}
+
+.pdf-config-modal__section span {
+  font-weight: 900;
+}
+
+.pdf-config-modal__section strong {
+  font-size: 0.78rem;
+  line-height: 1.25;
+  text-transform: uppercase;
 }
 
 html.accessibility-mode {
@@ -1465,12 +1549,16 @@ html.accessibility-mode .section-page {
 
   .pdf-export-toggle {
     left: 10px;
-    bottom: 72px;
+    bottom: 61px;
+  }
+
+  .pdf-config-modal__sections {
+    grid-template-columns: 1fr;
   }
 
   .user-pins-panel {
     left: 10px;
-    bottom: 120px;
+    bottom: 108px;
   }
 }
 
@@ -1595,6 +1683,35 @@ html.accessibility-mode .section-page {
     background: #e8f0f7 !important;
     border: 0.3mm solid #1559a4;
   }
+
+  .section-page:not([data-pdf-included="true"]) {
+    display: none !important;
+  }
+}
+
+html.is-pdf-exporting,
+html.is-pdf-exporting body {
+  overflow: visible !important;
+}
+
+html.is-pdf-exporting .item-card,
+html.is-pdf-exporting .menu-card,
+html.is-pdf-exporting .section-hero {
+  opacity: 1 !important;
+  transform: none !important;
+  animation: none !important;
+  transition: none !important;
+}
+
+html.is-pdf-exporting .item-card.is-loading .item-content h3,
+html.is-pdf-exporting .item-card.is-loading .item-content p,
+html.is-pdf-exporting .item-card.is-loading .item-content .item-footer {
+  color: inherit !important;
+  background: none !important;
+}
+
+html.is-pdf-exporting .item-card.is-loading .item-content .item-footer > * {
+  visibility: visible !important;
 }
 
 .login-page {
