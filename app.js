@@ -1178,26 +1178,21 @@ function bindGlobalActions() {
       if (isOpen) pdfClose?.focus();
     };
 
-    const preloadPdfImages = async () => {
-      const imageSources = sectionData.flatMap((section) => [section.heroImage, ...section.items.map((item) => item.image)])
-        .filter(Boolean)
-        .map(safeImage);
-      const uniqueSources = [...new Set(imageSources)];
-      let loaded = 0;
-      await Promise.all(uniqueSources.map((src) => new Promise((resolve) => {
-        const image = new Image();
-        const finish = () => {
-          loaded += 1;
-          if (pdfStatus) pdfStatus.textContent = `Preparing images... ${loaded} / ${uniqueSources.length}`;
-          resolve();
-        };
-        image.onload = finish;
-        image.onerror = finish;
-        image.src = src;
-      })));
-      pdfReady = true;
-      if (pdfGenerate) pdfGenerate.disabled = false;
-      if (pdfStatus) pdfStatus.textContent = 'Ready. Choose the sections to include.';
+    const preparePdfWithoutImages = () => {
+      document.querySelectorAll('#app img').forEach((image) => {
+        if (image.src) image.dataset.pdfOriginalSrc = image.getAttribute('src') || image.src;
+        image.removeAttribute('src');
+        image.classList.add('pdf-image-removed');
+      });
+    };
+
+    const restorePdfImages = () => {
+      document.querySelectorAll('#app img.pdf-image-removed').forEach((image) => {
+        const originalSrc = image.dataset.pdfOriginalSrc;
+        if (originalSrc) image.setAttribute('src', originalSrc);
+        image.classList.remove('pdf-image-removed');
+        delete image.dataset.pdfOriginalSrc;
+      });
     };
 
     const populatePdfSections = () => {
@@ -1215,9 +1210,10 @@ function bindGlobalActions() {
       populatePdfSections();
       pdfReady = false;
       if (pdfGenerate) pdfGenerate.disabled = true;
-      if (pdfStatus) pdfStatus.textContent = 'Preparing images in the background...';
+      if (pdfStatus) pdfStatus.textContent = 'Ready. Images are excluded to create the PDF faster.';
+      pdfReady = true;
+      if (pdfGenerate) pdfGenerate.disabled = false;
       setPdfModalOpen(true);
-      preloadPdfImages();
     });
 
     pdfSelectAll?.addEventListener('click', () => {
@@ -1239,12 +1235,14 @@ function bindGlobalActions() {
         section.dataset.pdfIncluded = String(selected.includes(section.id));
       });
       document.documentElement.classList.add('is-pdf-exporting');
+      preparePdfWithoutImages();
       setPdfModalOpen(false);
       window.requestAnimationFrame(() => window.requestAnimationFrame(() => window.print()));
     });
 
     window.addEventListener('afterprint', () => {
       document.documentElement.classList.remove('is-pdf-exporting');
+      restorePdfImages();
       document.querySelectorAll('.section-page').forEach((section) => delete section.dataset.pdfIncluded);
     });
   }
