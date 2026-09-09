@@ -1,3 +1,6 @@
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+window.scrollTo(0, 0);
+
 const app = document.getElementById('app');
 const dialog = document.getElementById('item-dialog');
 const itemForm = document.getElementById('item-form');
@@ -8,6 +11,79 @@ const hiddenImageInput = document.getElementById('item-image-url');
 const sectionIdInput = document.getElementById('section-id');
 const itemIndexInput = document.getElementById('item-index');
 const DEFAULT_IMAGE = 'img/AdobeStock_609514149.jpeg';
+const accessibilityKey = 'brochure_accessibility_mode';
+
+const applyAccessibilityMode = (isEnabled) => {
+  document.documentElement.classList.toggle('accessibility-mode', isEnabled);
+  const toggle = document.getElementById('accessibility-toggle');
+  toggle?.setAttribute('aria-pressed', String(isEnabled));
+  toggle?.setAttribute('aria-label', isEnabled ? 'Disable accessibility mode' : 'Enable accessibility mode');
+  if (toggle) toggle.textContent = isEnabled ? 'Accessibility: on' : 'Accessibility: off';
+  toggle?.classList.toggle('is-active', isEnabled);
+};
+
+applyAccessibilityMode(localStorage.getItem(accessibilityKey) === 'true');
+
+window.setTimeout(() => {
+  const loader = document.getElementById('app-loader');
+  if (!loader) return;
+  loader.classList.add('is-hidden');
+  window.setTimeout(() => loader.remove(), 520);
+}, 1000);
+
+window.setTimeout(() => {
+  const coverColors = document.querySelector('.catalogue-cover-colors');
+  if (!coverColors) return;
+  coverColors.classList.add('is-set');
+  coverColors.animate([
+    { transform: 'translateX(-120vw)' },
+    { transform: 'translateX(0)' }
+  ], {
+    duration: 820,
+    easing: 'ease-out',
+    fill: 'forwards'
+  });
+  document.querySelectorAll('.catalogue-cover-title .cover-title-mark').forEach((titleMark) => {
+    titleMark.classList.add('is-set');
+    titleMark.style.setProperty('margin-left', '0.03em', 'important');
+  });
+  const coverTitle = document.querySelector('.cover-title-heading');
+  const coverYear = document.querySelector('.cover-year__text');
+  coverTitle?.animate([
+    { transform: 'translateY(-120vh)' },
+    { transform: 'translateY(0)' }
+  ], {
+    duration: 820,
+    easing: 'ease-out',
+    fill: 'forwards'
+  });
+  coverYear?.animate([
+    { transform: 'translateY(120vh)' },
+    { transform: 'translateY(0)' }
+  ], {
+    duration: 820,
+    easing: 'ease-out',
+    fill: 'forwards'
+  });
+}, 2000);
+
+window.setTimeout(() => {
+  document.querySelector('.admin-bar__inner')?.animate([
+    { transform: 'translateY(120vh)' },
+    { transform: 'translateY(0)' }
+  ], {
+    duration: 820,
+    easing: 'ease-out',
+    fill: 'forwards'
+  });
+}, 4000);
+
+window.setTimeout(() => {
+  const bubble = document.querySelector('.admin-help-bubble');
+  if (!bubble) return;
+  bubble.classList.add('is-visible');
+  window.setTimeout(() => bubble.classList.add('is-hidden'), 8000);
+}, 8000);
 
 const storageKey = 'brochure_catalogue_state_v1';
 const lastLoginKey = 'brochure_last_login';
@@ -752,7 +828,7 @@ function renderCover() {
         <img class="catalogue-cover-image" src="stocksnap-people-2557396_1920.jpg" alt="People collaborating during a learning workshop" />
         <div class="catalogue-cover-shade"></div>
         <div class="catalogue-cover-content">
-          <h1 class="catalogue-cover-title">Learning<br />Catalogue<span>_</span><br />20<span class="cover-year-accent">26</span></h1>
+          <h1 class="catalogue-cover-title"><span class="cover-title-heading">Learning<br />Catalogue</span><span class="cover-title-mark">_</span><br /><span class="cover-year"><span class="cover-year__text">2026</span></span></h1>
         </div>
         <div class="catalogue-cover-colors" aria-hidden="true">
           <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
@@ -829,7 +905,7 @@ function renderMenu() {
   ];
 
   const cards = sectionData.map((section, index) => `
-    <a class="menu-card ${palette[index % palette.length]}" href="#${section.id}" aria-label="Open ${section.title}">
+    <a class="menu-card ${palette[index % palette.length]}" href="#${section.id}" data-menu-index="${index}" style="--menu-delay: ${index * 70}ms" aria-label="Open ${section.title}">
       <div class="menu-card__content">
         <span class="menu-card__number">${section.index}</span>
         <div class="menu-card__title">${section.title}</div>
@@ -901,8 +977,35 @@ function renderFloatingSectionMenu() {
   `;
 }
 
+function renderFloatingSearchPanel() {
+  const results = sectionData.flatMap((section) => section.items.map((item) => `
+    <a class="search-result" href="#${slugify(`${section.id}-${item.title}`)}" data-search-text="${`${item.title} ${item.text} ${item.info} ${section.title}`.toLowerCase()}">
+      <img src="${safeImage(item.image)}" alt="" loading="lazy" />
+      <span>${section.index}</span>
+      <strong>${item.title}</strong>
+    </a>
+  `)).join('');
+
+  return `
+    <aside class="floating-search" aria-label="Training search and section navigation">
+      <button class="floating-search__toggle" type="button" aria-expanded="false" aria-label="Open search" title="Search"><span aria-hidden="true"></span></button>
+      <div class="floating-search__section-nav" aria-label="Previous and next section">
+        <button class="floating-search__section-button" type="button" data-section-direction="previous" aria-label="Go to previous section" title="Previous section">↑</button>
+        <button class="floating-search__section-button" type="button" data-section-direction="next" aria-label="Go to next section" title="Next section">↓</button>
+      </div>
+      <div class="floating-search__panel" role="search">
+        <input class="floating-search__input" type="search" placeholder="Search training" aria-label="Search training" />
+        <div class="floating-search__results" aria-label="Search results">
+          ${results}
+        </div>
+        <p class="floating-search__empty">No result.</p>
+      </div>
+    </aside>
+  `;
+}
+
 function renderSectionTransitionOverlay() {
-  return '<div class="section-transition-overlay" aria-hidden="true"></div>';
+  return '<div class="section-transition-overlay" aria-hidden="true"><img src="ep_logo_loader.webp" alt="" /><span class="section-transition-overlay__farewell">bye bye!</span></div>';
 }
 
 function renderItem(item, sectionId, index) {
@@ -1036,6 +1139,7 @@ function renderApp() {
     renderUserLikesFooter(),
     renderUserPinsPanel(),
     renderFloatingSectionMenu(),
+    renderFloatingSearchPanel(),
     renderSectionTransitionOverlay()
   ].join('');
 
@@ -1045,6 +1149,34 @@ function renderApp() {
 
 function bindGlobalActions() {
   let previousScrollY = window.scrollY;
+
+  const accessibilityToggle = document.getElementById('accessibility-toggle');
+  if (accessibilityToggle && accessibilityToggle.dataset.bound !== 'true') {
+    accessibilityToggle.dataset.bound = 'true';
+    accessibilityToggle.addEventListener('click', () => {
+      const isEnabled = !document.documentElement.classList.contains('accessibility-mode');
+      localStorage.setItem(accessibilityKey, String(isEnabled));
+      applyAccessibilityMode(isEnabled);
+    });
+  }
+
+  document.querySelectorAll('a.link-btn[href]').forEach((link) => {
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      const overlay = document.querySelector('.section-transition-overlay');
+      const farewell = overlay?.querySelector('.section-transition-overlay__farewell');
+      overlay?.classList.add('is-active', 'is-farewell');
+      farewell?.setAttribute('aria-hidden', 'false');
+      window.setTimeout(() => {
+        window.open(link.href, '_blank', 'noopener,noreferrer');
+        overlay?.classList.remove('is-active', 'is-farewell');
+        farewell?.setAttribute('aria-hidden', 'true');
+        window.clearTimeout(overlayScrollTimer);
+        if (overlayScrollListener) window.removeEventListener('scroll', overlayScrollListener);
+        overlayScrollListener = null;
+      }, 1000);
+    });
+  });
 
   document.querySelectorAll('.menu-card').forEach((card) => {
     const enlargeCard = () => {
@@ -1061,6 +1193,23 @@ function bindGlobalActions() {
     card.addEventListener('blur', resetCard);
   });
 
+  document.querySelectorAll('.link-btn, .pin-btn, .edit-btn, .remove-btn').forEach((button) => {
+    const enlargeButton = () => {
+      button.classList.add('is-hovered');
+      button.style.transform = 'scale(1.08)';
+      button.style.scale = '1.08';
+    };
+    const resetButton = () => {
+      button.classList.remove('is-hovered');
+      button.style.transform = '';
+      button.style.scale = '';
+    };
+    button.addEventListener('pointerenter', enlargeButton);
+    button.addEventListener('pointerleave', resetButton);
+    button.addEventListener('focus', enlargeButton);
+    button.addEventListener('blur', resetButton);
+  });
+
   document.querySelectorAll('.item-info').forEach((info) => {
     const text = info.querySelector('.item-info__text');
     const toggle = info.querySelector('.item-info__toggle');
@@ -1071,12 +1220,20 @@ function bindGlobalActions() {
       info.classList.add('is-collapsible');
     }
 
-    toggle.addEventListener('click', (event) => {
-      event.preventDefault();
-      const isOpen = info.classList.toggle('is-open');
+    const setInfoOpen = (isOpen) => {
+      info.classList.toggle('is-open', isOpen);
       info.closest('.item-card')?.classList.toggle('is-info-open', isOpen);
       toggle.setAttribute('aria-expanded', String(isOpen));
+    };
+
+    toggle.addEventListener('click', (event) => {
+      event.preventDefault();
+      setInfoOpen(!info.classList.contains('is-open'));
     });
+    info.addEventListener('pointerenter', () => setInfoOpen(true));
+    info.addEventListener('pointerleave', () => setInfoOpen(false));
+    toggle.addEventListener('focus', () => setInfoOpen(true));
+    toggle.addEventListener('blur', () => setInfoOpen(false));
   });
 
   document.querySelectorAll('.pin-btn').forEach((button) => {
@@ -1125,26 +1282,30 @@ function bindGlobalActions() {
     });
   });
 
+  let sectionHeaderFrame = null;
   const updateSectionHeaders = () => {
-    const sections = [...document.querySelectorAll('.section-page')];
-    previousScrollY = window.scrollY;
-    const activeSection = [...sections].reverse().find((sectionPage) => {
-      const rect = sectionPage.getBoundingClientRect();
-      return rect.top <= 0 && rect.bottom > 0;
-    });
-    sections.forEach((sectionPage) => {
-      const hero = sectionPage.querySelector('.section-hero');
-      if (!hero) return;
-      const pageRect = sectionPage.getBoundingClientRect();
-      const incoming = sectionPage === activeSection;
-      hero.classList.toggle('is-active-section', sectionPage === activeSection);
-      hero.classList.toggle('is-behind', sectionPage !== activeSection);
-      hero.classList.toggle('is-incoming', incoming);
-      hero.classList.toggle('is-future', pageRect.top > 0 && sectionPage !== activeSection);
-      hero.classList.toggle('is-condensed', hero.getBoundingClientRect().top <= 1);
-      hero.classList.toggle('is-under-active-section', sectionPage !== activeSection && pageRect.top < 0);
-      hero.classList.remove('is-ending', 'is-at-top');
-
+    if (sectionHeaderFrame !== null) return;
+    sectionHeaderFrame = window.requestAnimationFrame(() => {
+      const sections = [...document.querySelectorAll('.section-page')];
+      previousScrollY = window.scrollY;
+      const activeSection = [...sections].reverse().find((sectionPage) => {
+        const rect = sectionPage.getBoundingClientRect();
+        return rect.top <= 0 && rect.bottom > 0;
+      });
+      sections.forEach((sectionPage) => {
+        const hero = sectionPage.querySelector('.section-hero');
+        if (!hero) return;
+        const pageRect = sectionPage.getBoundingClientRect();
+        const incoming = sectionPage === activeSection;
+        hero.classList.toggle('is-active-section', sectionPage === activeSection);
+        hero.classList.toggle('is-behind', sectionPage !== activeSection);
+        hero.classList.toggle('is-incoming', incoming);
+        hero.classList.toggle('is-future', pageRect.top > 0 && sectionPage !== activeSection);
+        hero.classList.toggle('is-condensed', pageRect.top <= 28);
+        hero.classList.toggle('is-under-active-section', sectionPage !== activeSection && pageRect.top < 0);
+        hero.classList.remove('is-ending', 'is-at-top');
+      });
+      sectionHeaderFrame = null;
     });
   };
 
@@ -1163,10 +1324,31 @@ function bindGlobalActions() {
 
   document.querySelectorAll('.item-card.is-loading').forEach((card) => itemObserver.observe(card));
 
+  const menuCardObserver = new IntersectionObserver((entries, observer) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add('is-visible');
+      observer.unobserve(entry.target);
+    });
+  }, { rootMargin: '80px 0px', threshold: 0.05 });
+
+  document.querySelectorAll('.menu-card').forEach((card) => menuCardObserver.observe(card));
+
+  const sectionHeroObserver = new IntersectionObserver((entries, observer) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add('is-section-visible');
+      observer.unobserve(entry.target);
+    });
+  }, { rootMargin: '100px 0px', threshold: 0.05 });
+
+  document.querySelectorAll('.section-hero').forEach((hero) => sectionHeroObserver.observe(hero));
+
   const navigateToSection = (targetId) => {
     const target = document.getElementById(targetId);
     const overlay = document.querySelector('.section-transition-overlay');
     if (!target) return;
+    holdOverlayAfterScroll();
     overlay?.classList.add('is-active');
 
     let stopTimer;
@@ -1179,11 +1361,11 @@ function bindGlobalActions() {
       window.clearTimeout(safetyTimer);
       window.clearInterval(pollTimer);
       window.removeEventListener('scroll', handleScroll);
-      overlay?.classList.remove('is-active');
+      window.setTimeout(() => updateTransitionOverlay(), 500);
     };
     const handleScroll = () => {
       window.clearTimeout(stopTimer);
-      stopTimer = window.setTimeout(finishTransition, 180);
+      stopTimer = window.setTimeout(finishTransition, 500);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -1192,7 +1374,7 @@ function bindGlobalActions() {
       if (Math.abs(currentScrollY - lastScrollY) > 1) {
         lastScrollY = currentScrollY;
         stableSince = Date.now();
-      } else if (Date.now() - stableSince >= 180) {
+      } else if (Date.now() - stableSince >= 500) {
         finishTransition();
       }
     }, 50);
@@ -1204,13 +1386,74 @@ function bindGlobalActions() {
 
   const menuPage = document.querySelector('.menu-page');
   const floatingMenu = document.querySelector('.floating-section-menu');
+  const floatingSearch = document.querySelector('.floating-search');
+  const transitionOverlay = document.querySelector('.section-transition-overlay');
+  let overlayScrollTimer;
+  let overlayScrollListener;
+  let hamburgerHovered = false;
+  let searchHovered = false;
+
+  const updateTransitionOverlay = () => {
+    const modalIsOpen = floatingMenu?.querySelector('.section-menu-list.is-open') || floatingSearch?.classList.contains('is-open');
+    const farewellIsActive = transitionOverlay?.classList.contains('is-farewell');
+    transitionOverlay?.classList.toggle('is-active', Boolean(modalIsOpen || overlayScrollListener || hamburgerHovered || searchHovered || farewellIsActive));
+  };
+
+  const holdOverlayAfterScroll = () => {
+    transitionOverlay?.classList.add('is-active');
+    window.clearTimeout(overlayScrollTimer);
+    if (overlayScrollListener) window.removeEventListener('scroll', overlayScrollListener);
+    overlayScrollListener = () => {
+      window.clearTimeout(overlayScrollTimer);
+      overlayScrollTimer = window.setTimeout(() => {
+        if (overlayScrollListener) window.removeEventListener('scroll', overlayScrollListener);
+        overlayScrollListener = null;
+        updateTransitionOverlay();
+      }, 500);
+    };
+    window.addEventListener('scroll', overlayScrollListener, { passive: true });
+    overlayScrollTimer = window.setTimeout(() => {
+      if (overlayScrollListener) window.removeEventListener('scroll', overlayScrollListener);
+      overlayScrollListener = null;
+      updateTransitionOverlay();
+    }, 500);
+  };
   if (menuPage && floatingMenu) {
     const updateFloatingMenu = () => {
-      floatingMenu.classList.toggle('is-visible', window.scrollY > menuPage.offsetTop + menuPage.offsetHeight - 120);
+      const isVisible = window.scrollY > menuPage.offsetTop + menuPage.offsetHeight - 120;
+      floatingMenu.classList.toggle('is-visible', isVisible);
+      floatingSearch?.classList.toggle('is-visible', isVisible);
+      floatingMenu.style.opacity = isVisible ? '1' : '0';
+      floatingMenu.style.transform = isVisible ? 'translateY(0) scale(1)' : 'translateY(-14px) scale(0.92)';
+      floatingMenu.style.pointerEvents = isVisible ? 'auto' : 'none';
+      if (floatingSearch) {
+        floatingSearch.style.opacity = isVisible ? '1' : '0';
+        floatingSearch.style.transform = isVisible ? 'translateY(0) scale(1)' : 'translateY(-14px) scale(0.92)';
+        floatingSearch.style.pointerEvents = isVisible ? 'auto' : 'none';
+      }
     };
     window.addEventListener('scroll', updateFloatingMenu, { passive: true });
     updateFloatingMenu();
+    window.requestAnimationFrame(updateFloatingMenu);
   }
+
+  floatingMenu?.addEventListener('mouseenter', () => {
+    hamburgerHovered = true;
+    const list = floatingMenu.querySelector('.floating-section-menu__list');
+    const toggle = floatingMenu.querySelector('.floating-section-menu__toggle');
+    list?.classList.add('is-open');
+    toggle?.setAttribute('aria-expanded', 'true');
+    updateTransitionOverlay();
+  });
+
+  floatingMenu?.addEventListener('mouseleave', () => {
+    hamburgerHovered = false;
+    if (floatingMenu.dataset.clickedOpen !== 'true') {
+      floatingMenu.querySelector('.floating-section-menu__list')?.classList.remove('is-open');
+      floatingMenu.querySelector('.floating-section-menu__toggle')?.setAttribute('aria-expanded', 'false');
+    }
+    updateTransitionOverlay();
+  });
 
   document.querySelectorAll('[data-target]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -1234,11 +1477,23 @@ function bindGlobalActions() {
   });
 
   document.querySelectorAll('.section-menu-toggle').forEach((toggle) => {
+    if (toggle.closest('.floating-section-menu')) {
+      toggle.addEventListener('mouseenter', () => {
+        hamburgerHovered = true;
+        updateTransitionOverlay();
+      });
+      toggle.addEventListener('mouseleave', () => {
+        hamburgerHovered = false;
+        updateTransitionOverlay();
+      });
+    }
     toggle.addEventListener('click', () => {
       const menu = toggle.nextElementSibling;
       toggle.closest('.floating-section-menu')?.classList.remove('is-closed');
       const isOpen = menu.classList.toggle('is-open');
+      toggle.closest('.floating-section-menu')?.setAttribute('data-clicked-open', String(isOpen));
       toggle.setAttribute('aria-expanded', String(isOpen));
+      updateTransitionOverlay();
     });
   });
 
@@ -1249,7 +1504,9 @@ function bindGlobalActions() {
       if (target) navigateToSection(target.id);
       const menu = link.closest('.floating-section-menu');
       menu?.querySelector('.section-menu-list')?.classList.remove('is-open');
+      menu?.setAttribute('data-clicked-open', 'false');
       menu?.querySelector('.section-menu-toggle')?.setAttribute('aria-expanded', 'false');
+      updateTransitionOverlay();
     });
   });
 
@@ -1258,7 +1515,9 @@ function bindGlobalActions() {
       const menu = closeButton.closest('.floating-section-menu');
       menu?.classList.add('is-closed');
       menu?.querySelector('.section-menu-list')?.classList.remove('is-open');
+      menu?.setAttribute('data-clicked-open', 'false');
       menu?.querySelector('.section-menu-toggle')?.setAttribute('aria-expanded', 'false');
+      updateTransitionOverlay();
     });
   });
 
@@ -1267,8 +1526,133 @@ function bindGlobalActions() {
       if (!menu.contains(event.target)) {
         menu.classList.add('is-closed');
         menu.querySelector('.section-menu-list')?.classList.remove('is-open');
+        menu.setAttribute('data-clicked-open', 'false');
         menu.querySelector('.section-menu-toggle')?.setAttribute('aria-expanded', 'false');
+        updateTransitionOverlay();
       }
+    });
+  });
+
+  document.querySelectorAll('.floating-search').forEach((search) => {
+    const toggle = search.querySelector('.floating-search__toggle');
+    const sectionButtons = [...search.querySelectorAll('[data-section-direction]')];
+    const input = search.querySelector('.floating-search__input');
+    const results = [...search.querySelectorAll('.search-result')];
+    const empty = search.querySelector('.floating-search__empty');
+    const sectionPages = [...document.querySelectorAll('.section-page')];
+    let searchHoverCloseTimer;
+
+    const closeSearchAfterHover = () => {
+      window.clearTimeout(searchHoverCloseTimer);
+      searchHoverCloseTimer = window.setTimeout(() => {
+        if (search.dataset.clickedOpen === 'true' || search.matches(':hover')) return;
+        searchHovered = false;
+        search.classList.remove('is-open');
+        toggle?.setAttribute('aria-expanded', 'false');
+        updateTransitionOverlay();
+      }, 50);
+    };
+
+    toggle?.addEventListener('mouseenter', () => {
+      window.clearTimeout(searchHoverCloseTimer);
+      searchHovered = true;
+      search.classList.add('is-open');
+      toggle?.setAttribute('aria-expanded', 'true');
+      updateTransitionOverlay();
+    });
+
+    toggle?.addEventListener('mouseleave', () => {
+      if (search.dataset.clickedOpen !== 'true') closeSearchAfterHover();
+    });
+
+    const searchPanel = search.querySelector('.floating-search__panel');
+    searchPanel?.addEventListener('mouseenter', () => {
+      window.clearTimeout(searchHoverCloseTimer);
+      if (search.dataset.clickedOpen !== 'true') searchHovered = true;
+      updateTransitionOverlay();
+    });
+
+    searchPanel?.addEventListener('mouseleave', () => {
+      if (search.dataset.clickedOpen !== 'true') closeSearchAfterHover();
+    });
+
+    const getCurrentSectionIndex = () => {
+      const marker = window.scrollY + 180;
+      let currentIndex = 0;
+      sectionPages.forEach((section, index) => {
+        if (section.offsetTop <= marker) currentIndex = index;
+      });
+      return currentIndex;
+    };
+
+    const updateSectionButtons = () => {
+      const currentIndex = getCurrentSectionIndex();
+      sectionButtons.forEach((button) => {
+        const direction = button.dataset.sectionDirection;
+        const targetIndex = direction === 'previous' ? currentIndex - 1 : currentIndex + 1;
+        button.disabled = targetIndex < 0 || targetIndex >= sectionPages.length;
+      });
+    };
+
+    const updateSearchResults = () => {
+      const query = input.value.trim().toLowerCase();
+      let visibleCount = 0;
+      results.forEach((result) => {
+        const isVisible = query.length > 0 && result.dataset.searchText.includes(query);
+        result.hidden = !isVisible;
+        if (isVisible) visibleCount += 1;
+      });
+      if (empty) empty.hidden = query.length === 0 || visibleCount > 0;
+    };
+
+    toggle?.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const isOpen = search.classList.toggle('is-open');
+      search.dataset.clickedOpen = String(isOpen);
+      toggle.setAttribute('aria-expanded', String(isOpen));
+      updateTransitionOverlay();
+      if (isOpen) window.setTimeout(() => input?.focus(), 0);
+    });
+
+    sectionButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const currentIndex = getCurrentSectionIndex();
+        const direction = button.dataset.sectionDirection;
+        const targetIndex = direction === 'previous' ? currentIndex - 1 : currentIndex + 1;
+        const target = sectionPages[targetIndex];
+        if (target) navigateToSection(target.id);
+      });
+    });
+
+    window.addEventListener('scroll', updateSectionButtons, { passive: true });
+    updateSectionButtons();
+
+    input?.addEventListener('input', updateSearchResults);
+    updateSearchResults();
+
+    results.forEach((link) => {
+      link.addEventListener('click', (event) => {
+        event.preventDefault();
+        const target = document.getElementById(link.getAttribute('href').slice(1));
+        if (target) {
+          holdOverlayAfterScroll();
+          const targetTop = target.getBoundingClientRect().top + window.scrollY;
+          window.scrollTo({ top: Math.max(0, targetTop - 120), behavior: 'smooth' });
+        }
+        search.classList.remove('is-open');
+        toggle?.setAttribute('aria-expanded', 'false');
+        updateTransitionOverlay();
+      });
+    });
+  });
+
+  document.addEventListener('click', (event) => {
+    document.querySelectorAll('.floating-search.is-open').forEach((search) => {
+      if (search.contains(event.target)) return;
+      search.classList.remove('is-open');
+      search.dataset.clickedOpen = 'false';
+      search.querySelector('.floating-search__toggle')?.setAttribute('aria-expanded', 'false');
+      updateTransitionOverlay();
     });
   });
 

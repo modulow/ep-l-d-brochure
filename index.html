@@ -4,17 +4,26 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>L&D Catalogue 2026</title>
-    <link rel="stylesheet" href="styles.css?v=55c3115" />
+    <link rel="stylesheet" href="styles.css?v=local-pins-aligned-1" />
   </head>
   <body>
+    <a class="skip-link" href="#app">Skip to main content</a>
+    <div id="app-loader" class="app-loader" aria-label="Loading brochure">
+      <img src="ep_logo_loader.webp" alt="" />
+    </div>
+
     <div id="app"></div>
 
+    <button id="accessibility-toggle" class="accessibility-toggle" type="button" aria-pressed="false" aria-label="Enable accessibility mode">
+      Accessibility: off
+    </button>
+
     <div id="admin-bar" class="admin-bar">
-      <div class="admin-help-bubble">Switch to user and pin your trainings</div>
+      <div class="admin-help-bubble">Switch to learner and pin your trainings</div>
       <div class="admin-bar__inner">
         <span class="admin-label">Admin</span>
         <a id="login-toggle" class="mini-btn" href="login.html">Log in</a>
-        <span class="admin-label user-label">User</span>
+        <span class="admin-label user-label">Learner</span>
         <button id="user-toggle" class="mini-btn" type="button">Start</button>
       </div>
     </div>
@@ -109,7 +118,7 @@
       </div>
     </div>
 
-    <script src="catalogue-data.js?v=55c3115"></script>
-    <script src="app.js?v=55c3115"></script>
+    <script src="catalogue-data.js?v=local-cover-year-smooth-1"></script>
+    <script src="app.js?v=local-accessibility-enhanced-1"></script>
   </body>
 </html>
