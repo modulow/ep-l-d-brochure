@@ -542,7 +542,7 @@ function getInitialSectionData() {
     const mergedItems = savedSection.items.map((savedItem) => {
       const authoritativeItem = authoritativeItems.get(itemKey(savedItem));
       return authoritativeItem
-        ? { ...savedItem, text: authoritativeItem.text, title: authoritativeItem.title }
+        ? { ...savedItem, text: authoritativeItem.text, title: authoritativeItem.title, size: authoritativeItem.size }
         : savedItem;
     });
 

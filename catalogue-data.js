@@ -1,4 +1,4 @@
-﻿window.authoritativeCatalogueItems = [
+window.authoritativeCatalogueItems = [
     {
         "sectionId":  "career-development",
         "cataloguePath":  "Career Development",
@@ -10,7 +10,7 @@
         "location":  "-",
         "duration":  "3h",
         "info":  "Online • 3h",
-        "size":  "standard"
+        "size":  "wide"
     },
     {
         "sectionId":  "career-development",
@@ -62,7 +62,7 @@
         "location":  "-",
         "duration":  "Variable",
         "info":  "Online/classroom • Variable",
-        "size":  "standard"
+        "size":  "wide"
     },
     {
         "sectionId":  "communication-competencies",
@@ -127,7 +127,7 @@
         "location":  "-",
         "duration":  "Variable",
         "info":  "Online • Variable",
-        "size":  "standard"
+        "size":  "wide"
     },
     {
         "sectionId":  "communication-competencies",
@@ -140,7 +140,7 @@
         "location":  "-",
         "duration":  "2h",
         "info":  "Online • 2h",
-        "size":  "standard"
+        "size":  "wide"
     },
     {
         "sectionId":  "communication-competencies",
@@ -296,7 +296,7 @@
         "location":  "-",
         "duration":  "Variable",
         "info":  "eLearning • Variable",
-        "size":  "standard"
+        "size":  "wide"
     },
     {
         "sectionId":  "digital-competences",
@@ -309,7 +309,7 @@
         "location":  "-",
         "duration":  "Variable",
         "info":  "online • Variable",
-        "size":  "standard"
+        "size":  "wide"
     },
     {
         "sectionId":  "digital-competences",
@@ -322,7 +322,7 @@
         "location":  "-",
         "duration":  "7h",
         "info":  "online • 7h",
-        "size":  "standard"
+        "size":  "wide"
     },
     {
         "sectionId":  "digital-competences",
@@ -335,7 +335,7 @@
         "location":  "-",
         "duration":  "21h",
         "info":  "online • 21h",
-        "size":  "standard"
+        "size":  "wide"
     },
     {
         "sectionId":  "digital-competences",
@@ -387,7 +387,7 @@
         "location":  "-",
         "duration":  "Variable",
         "info":  "Online • Variable",
-        "size":  "standard"
+        "size":  "wide"
     },
     {
         "sectionId":  "ep-work-tools",
@@ -413,7 +413,7 @@
         "location":  "-",
         "duration":  "1h",
         "info":  "Online • 1h",
-        "size":  "standard"
+        "size":  "wide"
     },
     {
         "sectionId":  "ep-work-tools",
@@ -478,7 +478,7 @@
         "location":  "",
         "duration":  "",
         "info":  "",
-        "size":  "standard"
+        "size":  "wide"
     },
     {
         "sectionId":  "eu-policies",
@@ -530,7 +530,7 @@
         "location":  "-",
         "duration":  "3,5h",
         "info":  "Online • 3,5h",
-        "size":  "standard"
+        "size":  "wide"
     },
     {
         "sectionId":  "eu-policies",
@@ -621,7 +621,7 @@
         "location":  "-",
         "duration":  "3,5h",
         "info":  "Online • 3,5h",
-        "size":  "standard"
+        "size":  "wide"
     },
     {
         "sectionId":  "eu-policies",
@@ -634,7 +634,7 @@
         "location":  "-",
         "duration":  "7h",
         "info":  "Online • 7h",
-        "size":  "standard"
+        "size":  "wide"
     },
     {
         "sectionId":  "eu-policies",
@@ -725,7 +725,7 @@
         "location":  "-",
         "duration":  "7h",
         "info":  "Online • 7h",
-        "size":  "standard"
+        "size":  "wide"
     },
     {
         "sectionId":  "eu-policies",
@@ -803,7 +803,7 @@
         "location":  "-",
         "duration":  "1,5h",
         "info":  "online • 1,5h",
-        "size":  "standard"
+        "size":  "wide"
     },
     {
         "sectionId":  "ep-talks-webinars",
@@ -894,7 +894,7 @@
         "location":  "-",
         "duration":  "Variable",
         "info":  "Online • Variable",
-        "size":  "standard"
+        "size":  "wide"
     },
     {
         "sectionId":  "language-courses",
@@ -907,7 +907,7 @@
         "location":  "-",
         "duration":  "Variable",
         "info":  "online • Variable",
-        "size":  "standard"
+        "size":  "wide"
     },
     {
         "sectionId":  "jean-monnet-academy",
@@ -1037,7 +1037,7 @@
         "location":  "-",
         "duration":  "2h",
         "info":  "Online • 2h",
-        "size":  "standard"
+        "size":  "wide"
     },
     {
         "sectionId":  "mep-apa-training",
@@ -1222,4 +1222,3 @@
         "size":  "standard"
     }
 ];
-
