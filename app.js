@@ -1160,6 +1160,15 @@ function bindGlobalActions() {
     });
   }
 
+  const pdfExportToggle = document.getElementById('pdf-export-toggle');
+  if (pdfExportToggle && pdfExportToggle.dataset.bound !== 'true') {
+    pdfExportToggle.dataset.bound = 'true';
+    pdfExportToggle.addEventListener('click', () => {
+      document.title = 'L&D Catalogue 2026';
+      window.print();
+    });
+  }
+
   document.querySelectorAll('a.link-btn[href]').forEach((link) => {
     link.addEventListener('click', (event) => {
       event.preventDefault();
