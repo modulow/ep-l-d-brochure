@@ -13,7 +13,10 @@ const storageKey = 'brochure_catalogue_state_v1';
 const lastLoginKey = 'brochure_last_login';
 const catalogueEncodedKey = 'brochure_catalogue_encoded_at';
 const demoProfilesKey = 'brochure_demo_profiles_seed_v1';
+const userModeKey = 'brochure_user_mode';
+const pinnedItemsKey = 'brochure_user_pins';
 let isLoggedIn = localStorage.getItem('brochure_admin_authenticated') === 'true';
+let isUserMode = localStorage.getItem(userModeKey) === 'true';
 
 const demoProfiles = [
   { name: 'Camille Durand', role: 'Content lead' },
@@ -22,7 +25,7 @@ const demoProfiles = [
   { name: 'Sofia Moreau', role: 'Quality reviewer' },
   { name: 'Jonas Weber', role: 'Programme owner' },
   { name: 'Elena Petrov', role: 'Metadata editor' },
-  { name: 'Hugo Martin', role: 'Catalogue admin' },
+  { name: 'Hugo Martin', role: 'Brochure admin' },
   { name: 'Ines Lefevre', role: 'Link checker' },
   { name: 'Amina Benali', role: 'Description editor' },
   { name: 'Thomas Klein', role: 'Section coordinator' }
@@ -85,6 +88,33 @@ function normalizeSectionData(data) {
 
 function saveCatalogueState(data) {
   localStorage.setItem(storageKey, JSON.stringify(normalizeSectionData(data)));
+}
+
+function normalizeTitleKey(value) {
+  return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function slugify(value) {
+  return normalizeTitleKey(value)
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'item';
+}
+
+function getItemLikeKey(sectionId, item) {
+  return `${sectionId}:${normalizeTitleKey(item?.title)}`;
+}
+
+function getLikedItems() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(pinnedItemsKey) || localStorage.getItem('brochure_user_likes') || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveLikedItems(likes) {
+  localStorage.setItem(pinnedItemsKey, JSON.stringify([...new Set(likes)]));
 }
 
 const baseSectionData = [
@@ -502,12 +532,21 @@ function getInitialSectionData() {
   const saved = loadCatalogueState();
   if (!Array.isArray(saved)) return authoritative;
 
+  const itemKey = (item) => normalizeTitleKey(item?.title);
   const savedMap = new Map(saved.map((section) => [section.id, section]));
   return authoritative.map((section) => {
     const savedSection = savedMap.get(section.id);
-    return savedSection && Array.isArray(savedSection.items)
-      ? { ...section, items: savedSection.items }
-      : section;
+    if (!savedSection || !Array.isArray(savedSection.items)) return section;
+
+    const authoritativeItems = new Map(section.items.map((item) => [itemKey(item), item]));
+    const mergedItems = savedSection.items.map((savedItem) => {
+      const authoritativeItem = authoritativeItems.get(itemKey(savedItem));
+      return authoritativeItem
+        ? { ...savedItem, text: authoritativeItem.text, title: authoritativeItem.title }
+        : savedItem;
+    });
+
+    return { ...section, heroImage: savedSection.heroImage || section.heroImage, items: mergedItems };
   });
 }
 
@@ -528,7 +567,7 @@ function applyDemoProfileMetadata(data) {
     section.items.forEach((item) => {
       const owner = shouldSeedProfiles
         ? demoProfiles[globalIndex % demoProfiles.length]
-        : demoProfiles.find((profile) => profile.name === item.owner) || { name: item.owner || 'Laurent', role: 'Catalogue admin' };
+        : demoProfiles.find((profile) => profile.name === item.owner) || { name: item.owner || 'Laurent', role: 'Brochure admin' };
       const editCount = shouldSeedProfiles ? 1 + (globalIndex % 3) : 1;
       const editHistory = shouldSeedProfiles
         ? Array.from({ length: editCount }, (_, editIndex) => ({
@@ -563,8 +602,44 @@ function formatDashboardDate(value) {
     : new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 }
 
+function summarizeText(text) {
+  const original = String(text || '').trim();
+  if (!original || /^lorem ipsum/i.test(original)) return original;
+
+  const cleaned = original
+    .replace(/\s*(?:\.{3}|…)\s*$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (cleaned.length <= 200) return cleaned;
+
+  const lines = original
+    .replace(/\s*(?:\.{3}|…)\s*$/g, '')
+    .split(/\n+/)
+    .map((line) => line
+      .replace(/^\s*(?:•|-|–)?\s*(?:\d+[.)]\s*)?(?:Module\s+\d+\s*)?/i, '')
+      .trim())
+    .filter((line) => line.length > 12);
+
+  if (lines.length >= 3) {
+    return `This course covers ${lines.slice(0, 3).join(', ')}.`;
+  }
+
+  const sentences = cleaned.match(/[^.!?]+[.!?]/g) || [];
+  const summary = sentences.slice(0, 2).join(' ').trim();
+  if (summary.length >= 60 && summary.length <= 240) return summary;
+
+  const words = cleaned.split(' ');
+  if (words.length <= 28) return cleaned;
+  return words.slice(0, 28).join(' ').replace(/[,:;\-–]+$/g, '').trim() + '.';
+}
+
 function getAllItems() {
   return sectionData.flatMap((section) => section.items.map((item, index) => ({ item, section, index })));
+}
+
+function dashboardText(value) {
+  return String(value || '').replace(/catalogue/gi, 'brochure');
 }
 
 function getDashboardStats(items) {
@@ -702,14 +777,14 @@ function renderDashboard() {
       <article class="dashboard-item">
         <div class="dashboard-item__main">
           <span class="dashboard-item__section">${section.index} · ${section.title}</span>
-          <h2>${item.title}</h2>
+          <h2>${dashboardText(item.title)}</h2>
           <span class="dashboard-item__meta">Owner: ${item.owner} · Last edited by ${latestEdit.person} on ${formatDashboardDate(latestEdit.timestamp)}</span>
         </div>
         <details class="dashboard-item__history">
           <summary>Edited by ${item.editHistory.length} ${item.editHistory.length === 1 ? 'person' : 'people'}</summary>
           <ul>${history}</ul>
         </details>
-        <button class="edit-btn dashboard-item__edit" type="button" data-section-id="${section.id}" data-item-index="${index}" aria-label="Edit ${item.title}" title="Edit item">&#9998;</button>
+        <button class="edit-btn dashboard-item__edit" type="button" data-section-id="${section.id}" data-item-index="${index}" aria-label="Edit ${dashboardText(item.title)}" title="Edit item">&#9998;</button>
       </article>
     `;
   }).join('');
@@ -718,9 +793,9 @@ function renderDashboard() {
     <section class="dashboard-page page" id="dashboard">
       <div class="dashboard-header">
         <div>
-          <span class="section-label">CATALOGUE ADMINISTRATION</span>
+          <span class="section-label">BROCHURE ADMINISTRATION</span>
           <h1>Hello Laurent</h1>
-          <p>Here is the complete catalogue and its editing history.</p>
+          <p>Here is the complete brochure and its editing history.</p>
         </div>
         <div class="dashboard-stats">
           <div><strong>${items.length}</strong><span>Items</span></div>
@@ -738,7 +813,7 @@ function renderDashboard() {
           <span>Owner and edit history</span>
           <strong>${items.length} items</strong>
         </summary>
-        <div class="dashboard-list__heading"><span>All catalogue items</span><span>Owner and edit history</span></div>
+        <div class="dashboard-list__heading"><span>All brochure items</span><span>Owner and edit history</span></div>
         ${rows}
       </details>
     </section>
@@ -833,8 +908,12 @@ function renderSectionTransitionOverlay() {
 function renderItem(item, sectionId, index) {
   const hasDescription = Boolean(item.text && item.text.trim());
   const isPlaceholderDescription = /^lorem ipsum/i.test(item.text?.trim() || '');
+  const summaryText = hasDescription ? summarizeText(item.text) : '';
   const sizeClass = item.size === 'wide' || !hasDescription || isPlaceholderDescription ? 'item-card--wide' : '';
   const actionLabel = sizeClass ? 'Discover our selection' : 'Enrol';
+  const likeKey = getItemLikeKey(sectionId, item);
+  const isLiked = getLikedItems().includes(likeKey);
+  const likeButton = isUserMode ? `<button class="pin-btn ${isLiked ? 'is-pinned' : ''}" type="button" data-like-key="${likeKey}" aria-pressed="${isLiked}" aria-label="Pin ${item.title}" title="Pin item">${isLiked ? 'Pinned' : 'Pin'}</button>` : '';
   const editButton = isLoggedIn ? `<button class="edit-btn" type="button" data-section-id="${sectionId}" data-item-index="${index}" aria-label="Edit ${item.title}" title="Edit item">&#9998;</button>` : '';
   const removeButton = isLoggedIn ? `<button class="remove-btn" type="button" data-section-id="${sectionId}" data-item-index="${index}" aria-label="Remove ${item.title}" title="Remove item">&#128465;</button>` : '';
   const enrolButton = item.link
@@ -842,12 +921,16 @@ function renderItem(item, sectionId, index) {
     : `<span class="link-btn link-btn--disabled" aria-disabled="true">${actionLabel}</span>`;
 
   return `
-    <article class="item-card is-loading ${sizeClass}" data-item-index="${index}" draggable="${isLoggedIn}">
+    <article class="item-card is-loading ${sizeClass}" id="${slugify(`${sectionId}-${item.title}`)}" data-like-key="${likeKey}" data-item-index="${index}" draggable="${isLoggedIn}">
       <div class="item-content">
         <h3>${item.title}</h3>
-        ${hasDescription ? `<p>${item.text}</p>` : ''}
+        ${summaryText ? `<p>${summaryText}</p>` : ''}
         <div class="item-footer">
-          <span class="item-info">${item.info}</span>
+          <span class="item-info">
+            <span class="item-info__text">${item.info}</span>
+            <button class="item-info__toggle" type="button" aria-expanded="false" aria-label="Show item information">Infos</button>
+            <span class="item-info__panel">${item.info}</span>
+          </span>
           <div class="item-actions">
             ${enrolButton}
           </div>
@@ -855,10 +938,64 @@ function renderItem(item, sectionId, index) {
       </div>
       <div class="item-media">
         <img src="${safeImage(item.image)}" alt="${item.title}" loading="eager" decoding="async" onload="this.classList.add('is-loaded');this.closest('.item-card').dataset.imageLoaded='true';if(this.closest('.item-card').dataset.inViewport==='true')window.revealItemCard(this.closest('.item-card'));" onerror="this.onerror=null;this.src='${DEFAULT_IMAGE}';this.classList.add('is-loaded');this.closest('.item-card').dataset.imageLoaded='true';if(this.closest('.item-card').dataset.inViewport==='true')window.revealItemCard(this.closest('.item-card'));" />
+        ${likeButton}
         ${editButton}
         ${removeButton}
       </div>
     </article>
+  `;
+}
+
+function renderUserLikesFooter() {
+  if (!isUserMode) return '';
+  const likedItems = getPinnedItemRecords();
+  const links = likedItems.map(({ item, section }) => `
+    <a href="#${slugify(`${section.id}-${item.title}`)}">
+      <img src="${safeImage(item.image)}" alt="" loading="lazy" />
+      <span>${section.index}</span>
+      <strong>${item.title}</strong>
+    </a>
+  `).join('');
+
+  return `
+    <footer class="user-pins-footer" id="user-pins">
+      <div>
+        <span class="section-label">USER PINS</span>
+        <h2>Your pinned items</h2>
+      </div>
+      <nav aria-label="Pinned items">
+        ${likedItems.length ? links : '<p>No pinned items yet.</p>'}
+      </nav>
+    </footer>
+  `;
+}
+
+function getPinnedItemRecords() {
+  const pins = new Set(getLikedItems());
+  return sectionData.flatMap((section) => section.items.map((item) => ({ item, section })))
+    .filter(({ item, section }) => pins.has(getItemLikeKey(section.id, item)));
+}
+
+function renderUserPinsPanel() {
+  if (!isUserMode) return '';
+  const pinnedItems = getPinnedItemRecords();
+  const links = pinnedItems.map(({ item, section }) => `
+    <a href="#${slugify(`${section.id}-${item.title}`)}">
+      <img src="${safeImage(item.image)}" alt="" loading="lazy" />
+      <span>${section.index}</span>
+      <strong>${item.title}</strong>
+    </a>
+  `).join('');
+
+  return `
+    <aside class="user-pins-panel" aria-label="Pinned items panel">
+      <button class="user-pins-panel__toggle" type="button" aria-expanded="false">
+        Pins <span>${pinnedItems.length}</span>
+      </button>
+      <nav class="user-pins-panel__list" aria-label="Pinned items quick access">
+        ${pinnedItems.length ? links : '<p>No pinned items yet.</p>'}
+      </nav>
+    </aside>
   `;
 }
 
@@ -873,6 +1010,7 @@ function renderSectionPage(section) {
         <h2>${section.title}</h2>
       </div>
       <div class="section-hero__image">
+        ${isLoggedIn ? `<button class="secondary-btn change-section-image-btn section-image-admin-btn" type="button" data-section-id="${section.id}">Change image</button>` : ''}
         <img src="${safeImage(section.heroImage)}" alt="${section.title}" loading="eager" decoding="async" onload="this.classList.add('is-loaded');this.closest('.section-hero__image').classList.add('is-loaded');" onerror="this.onerror=null;this.src='${DEFAULT_IMAGE}';this.classList.add('is-loaded');this.closest('.section-hero__image').classList.add('is-loaded');" />
       </div>
 
@@ -881,7 +1019,9 @@ function renderSectionPage(section) {
           ${items}
         </div>
         <div class="section-actions">
-          ${isLoggedIn ? `<button class="primary-btn add-item-btn" type="button" data-section-id="${section.id}">Add item</button>` : ''}
+          ${isLoggedIn ? `
+            <button class="primary-btn add-item-btn" type="button" data-section-id="${section.id}">Add item</button>
+          ` : ''}
         </div>
       </div>
     </section>
@@ -893,6 +1033,8 @@ function renderApp() {
     isLoggedIn ? renderDashboard() : renderCover(),
     renderMenu(),
     ...sectionData.map(renderSectionPage),
+    renderUserLikesFooter(),
+    renderUserPinsPanel(),
     renderFloatingSectionMenu(),
     renderSectionTransitionOverlay()
   ].join('');
@@ -905,10 +1047,82 @@ function bindGlobalActions() {
   let previousScrollY = window.scrollY;
 
   document.querySelectorAll('.menu-card').forEach((card) => {
-    card.addEventListener('pointerenter', () => card.classList.add('is-hovered'));
-    card.addEventListener('pointerleave', () => card.classList.remove('is-hovered'));
-    card.addEventListener('focus', () => card.classList.add('is-hovered'));
-    card.addEventListener('blur', () => card.classList.remove('is-hovered'));
+    const enlargeCard = () => {
+      card.classList.add('is-hovered');
+      card.style.transform = 'scale(1.08)';
+    };
+    const resetCard = () => {
+      card.classList.remove('is-hovered');
+      card.style.transform = '';
+    };
+    card.addEventListener('pointerenter', enlargeCard);
+    card.addEventListener('pointerleave', resetCard);
+    card.addEventListener('focus', enlargeCard);
+    card.addEventListener('blur', resetCard);
+  });
+
+  document.querySelectorAll('.item-info').forEach((info) => {
+    const text = info.querySelector('.item-info__text');
+    const toggle = info.querySelector('.item-info__toggle');
+    if (!text || !toggle) return;
+
+    const lineHeight = parseFloat(getComputedStyle(text).lineHeight) || 16;
+    if (text.scrollHeight >= lineHeight * 2.6) {
+      info.classList.add('is-collapsible');
+    }
+
+    toggle.addEventListener('click', (event) => {
+      event.preventDefault();
+      const isOpen = info.classList.toggle('is-open');
+      info.closest('.item-card')?.classList.toggle('is-info-open', isOpen);
+      toggle.setAttribute('aria-expanded', String(isOpen));
+    });
+  });
+
+  document.querySelectorAll('.pin-btn').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      const likeKey = button.getAttribute('data-like-key');
+      const likes = new Set(getLikedItems());
+      if (likes.has(likeKey)) {
+        likes.delete(likeKey);
+      } else {
+        likes.add(likeKey);
+      }
+      saveLikedItems([...likes]);
+      renderApp();
+    });
+  });
+
+  document.querySelectorAll('.user-pins-panel').forEach((panel) => {
+    const toggle = panel.querySelector('.user-pins-panel__toggle');
+    const list = panel.querySelector('.user-pins-panel__list');
+    toggle?.addEventListener('click', () => {
+      const isOpen = panel.classList.toggle('is-open');
+      toggle.setAttribute('aria-expanded', String(isOpen));
+    });
+  });
+
+  document.querySelectorAll('.user-pins-panel__list a, .user-pins-footer a').forEach((link) => {
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      const target = document.getElementById(link.getAttribute('href').slice(1));
+      if (target) {
+        const targetTop = target.getBoundingClientRect().top + window.scrollY;
+        window.scrollTo({ top: Math.max(0, targetTop - 120), behavior: 'smooth' });
+      }
+      const panel = link.closest('.user-pins-panel');
+      panel?.classList.remove('is-open');
+      panel?.querySelector('.user-pins-panel__toggle')?.setAttribute('aria-expanded', 'false');
+    });
+  });
+
+  document.addEventListener('click', (event) => {
+    document.querySelectorAll('.user-pins-panel.is-open').forEach((panel) => {
+      if (panel.contains(event.target)) return;
+      panel.classList.remove('is-open');
+      panel.querySelector('.user-pins-panel__toggle')?.setAttribute('aria-expanded', 'false');
+    });
   });
 
   const updateSectionHeaders = () => {
@@ -927,7 +1141,7 @@ function bindGlobalActions() {
       hero.classList.toggle('is-behind', sectionPage !== activeSection);
       hero.classList.toggle('is-incoming', incoming);
       hero.classList.toggle('is-future', pageRect.top > 0 && sectionPage !== activeSection);
-      hero.classList.toggle('is-condensed', incoming && hero.getBoundingClientRect().top <= 0);
+      hero.classList.toggle('is-condensed', hero.getBoundingClientRect().top <= 1);
       hero.classList.toggle('is-under-active-section', sectionPage !== activeSection && pageRect.top < 0);
       hero.classList.remove('is-ending', 'is-at-top');
 
@@ -1087,6 +1301,36 @@ function bindGlobalActions() {
     });
   });
 
+  if (isLoggedIn) {
+    const sectionImageInput = document.createElement('input');
+    sectionImageInput.type = 'file';
+    sectionImageInput.accept = 'image/*';
+    sectionImageInput.hidden = true;
+    document.body.appendChild(sectionImageInput);
+    let pendingSectionId = null;
+
+    document.querySelectorAll('.change-section-image-btn').forEach((button) => {
+      button.addEventListener('click', () => {
+        pendingSectionId = button.getAttribute('data-section-id');
+        sectionImageInput.value = '';
+        sectionImageInput.click();
+      });
+    });
+
+    sectionImageInput.addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      const section = sectionData.find((entry) => entry.id === pendingSectionId);
+      if (!file || !section) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        section.heroImage = reader.result;
+        saveCatalogueState(sectionData);
+        renderApp();
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
   if (isLoggedIn) bindDragAndDrop();
 }
 
@@ -1131,6 +1375,7 @@ function bindDragAndDrop() {
 
 function bindAdminActions() {
   const loginToggle = document.getElementById('login-toggle');
+  const userToggle = document.getElementById('user-toggle');
   const adminPanel = document.getElementById('admin-panel');
   const adminForm = document.getElementById('admin-form');
   const closeAdmin = document.getElementById('close-admin');
@@ -1146,6 +1391,16 @@ function bindAdminActions() {
     isLoggedIn = false;
     renderApp();
   } : null;
+
+  if (userToggle) {
+    userToggle.textContent = isUserMode ? 'Stop' : 'Start';
+    userToggle.classList.toggle('is-active', isUserMode);
+    userToggle.onclick = () => {
+      isUserMode = !isUserMode;
+      localStorage.setItem(userModeKey, String(isUserMode));
+      renderApp();
+    };
+  }
 
   closeAdmin.onclick = () => adminPanel.classList.add('hidden');
   cancelAdmin.onclick = () => adminPanel.classList.add('hidden');
