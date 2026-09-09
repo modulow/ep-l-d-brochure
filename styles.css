@@ -89,7 +89,18 @@ html.accessibility-mode .page {
 }
 
 html.accessibility-mode img {
-  filter: none;
+  filter: contrast(1.35) brightness(1.08) saturate(1.12);
+}
+
+html.accessibility-mode .item-media,
+html.accessibility-mode .section-hero__image {
+  border: 2px solid #000000;
+}
+
+html.accessibility-mode .item-media img,
+html.accessibility-mode .section-hero__image img,
+html.accessibility-mode .catalogue-cover-image {
+  filter: contrast(1.45) brightness(1.08) saturate(1.15);
 }
 html {
   scroll-behavior: auto;
@@ -892,6 +903,35 @@ img { display: block; max-width: 100%; }
   opacity: 1;
 }
 
+.item-media__description {
+  display: none;
+}
+
+html.accessibility-mode .item-card .item-media {
+  cursor: pointer;
+}
+
+html.accessibility-mode .item-card .item-media.is-description-visible {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #ffffff;
+  clip-path: none;
+}
+
+html.accessibility-mode .item-card .item-media.is-description-visible img {
+  display: none;
+}
+
+html.accessibility-mode .item-card .item-media.is-description-visible .item-media__description {
+  display: block;
+  color: #000000;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.7;
+  text-align: left;
+}
+
 @keyframes skeleton-shimmer {
   to { background-position: -200% 0; }
 }
@@ -1265,6 +1305,13 @@ img { display: block; max-width: 100%; }
   font-size: 0.82rem;
 }
 
+.accessibility-toggle,
+.pdf-export-toggle,
+.user-pins-panel__toggle,
+.admin-bar .mini-btn {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+}
+
 .accessibility-toggle {
   position: fixed;
   left: 18px;
@@ -1284,7 +1331,16 @@ img { display: block; max-width: 100%; }
 
 .accessibility-toggle:hover,
 .accessibility-toggle:focus-visible,
-.accessibility-toggle.is-active {
+.accessibility-toggle.is-active,
+.pdf-export-toggle:hover,
+.pdf-export-toggle:focus-visible,
+.user-pins-panel__toggle:hover,
+.user-pins-panel__toggle:focus-visible,
+.admin-bar .mini-btn:hover,
+.admin-bar .mini-btn:focus-visible,
+.admin-bar .mini-btn.is-active {
+  transform: translateY(-1px) scale(1.04);
+  box-shadow: 0 10px 22px rgba(13, 35, 58, 0.14), inset 0 0 0 1px rgba(13, 78, 167, 0.08);
   background: var(--primary-yellow);
   color: #000000;
 }
@@ -1304,12 +1360,6 @@ img { display: block; max-width: 100%; }
   cursor: pointer;
   font-size: 0.8rem;
   font-weight: 700;
-}
-
-.pdf-export-toggle:hover,
-.pdf-export-toggle:focus-visible {
-  background: var(--primary-yellow);
-  color: #000000;
 }
 
 .pdf-config-modal {
@@ -2720,6 +2770,12 @@ html.accessibility-mode .admin-help-bubble.is-visible {
   flex-direction: column;
   gap: 8px;
   margin-bottom: 14px;
+}
+
+.field-help {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
 }
 
 .field-row {

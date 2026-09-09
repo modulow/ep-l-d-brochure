@@ -117,6 +117,11 @@ function safeImage(src) {
   return (src && src.trim()) || DEFAULT_IMAGE;
 }
 
+function imageDescriptionFor(item) {
+  const title = String(item?.title || 'training image').trim();
+  return String(item?.imageDescription || `Illustration for the training: ${title}.`).slice(0, 200);
+}
+
 function loadCatalogueState() {
   try {
     const raw = localStorage.getItem(storageKey);
@@ -1014,6 +1019,7 @@ function renderItem(item, sectionId, index) {
   const summaryText = hasDescription ? summarizeText(item.text) : '';
   const sizeClass = item.size === 'wide' || !hasDescription || isPlaceholderDescription ? 'item-card--wide' : '';
   const actionLabel = sizeClass ? 'Discover our selection' : 'Enrol';
+  const imageDescription = imageDescriptionFor(item);
   const likeKey = getItemLikeKey(sectionId, item);
   const isLiked = getLikedItems().includes(likeKey);
   const likeButton = isUserMode ? `<button class="pin-btn ${isLiked ? 'is-pinned' : ''}" type="button" data-like-key="${likeKey}" aria-pressed="${isLiked}" aria-label="Pin ${item.title}" title="Pin item">${isLiked ? 'Pinned' : 'Pin'}</button>` : '';
@@ -1039,8 +1045,9 @@ function renderItem(item, sectionId, index) {
           </div>
         </div>
       </div>
-      <div class="item-media">
+      <div class="item-media" tabindex="0" role="button" aria-label="Show image description: ${imageDescription.replace(/"/g, '&quot;')}">
         <img src="${safeImage(item.image)}" alt="${item.title}" loading="eager" decoding="async" onload="this.classList.add('is-loaded');this.closest('.item-card').dataset.imageLoaded='true';if(this.closest('.item-card').dataset.inViewport==='true')window.revealItemCard(this.closest('.item-card'));" onerror="this.onerror=null;this.src='${DEFAULT_IMAGE}';this.classList.add('is-loaded');this.closest('.item-card').dataset.imageLoaded='true';if(this.closest('.item-card').dataset.inViewport==='true')window.revealItemCard(this.closest('.item-card'));" />
+        <span class="item-media__description">${imageDescription}</span>
         ${likeButton}
         ${editButton}
         ${removeButton}
@@ -1278,6 +1285,35 @@ function bindGlobalActions() {
     card.addEventListener('pointerleave', resetCard);
     card.addEventListener('focus', enlargeCard);
     card.addEventListener('blur', resetCard);
+  });
+
+  document.querySelectorAll('.item-media[role="button"]').forEach((media) => {
+    const setDescriptionVisible = (isVisible, pinned = media.dataset.descriptionPinned === 'true') => {
+      if (!document.documentElement.classList.contains('accessibility-mode')) return;
+      media.classList.toggle('is-description-visible', isVisible);
+      if (!isVisible && !pinned) media.dataset.descriptionPinned = 'false';
+    };
+
+    media.addEventListener('pointerenter', () => setDescriptionVisible(true));
+    media.addEventListener('pointerleave', () => {
+      if (media.dataset.descriptionPinned !== 'true') setDescriptionVisible(false, false);
+    });
+    media.addEventListener('click', (event) => {
+      if (event.target.closest('button, a')) return;
+      if (!document.documentElement.classList.contains('accessibility-mode')) return;
+      const isPinned = media.dataset.descriptionPinned === 'true';
+      media.dataset.descriptionPinned = String(!isPinned);
+      setDescriptionVisible(!isPinned, !isPinned);
+    });
+    media.addEventListener('focus', () => setDescriptionVisible(true));
+    media.addEventListener('blur', () => {
+      if (media.dataset.descriptionPinned !== 'true') setDescriptionVisible(false, false);
+    });
+    media.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      media.click();
+    });
   });
 
   document.querySelectorAll('.link-btn, .pin-btn, .edit-btn, .remove-btn').forEach((button) => {
@@ -1933,11 +1969,13 @@ function openDialog(sectionId, itemIndex = null) {
       document.getElementById('item-link').value = item.link || '';
       document.getElementById('item-text').value = item.text || '';
       document.getElementById('item-info').value = item.info || '';
+      document.getElementById('item-image-description').value = imageDescriptionFor(item);
       document.getElementById('item-size').value = item.size || 'standard';
       hiddenImageInput.value = item.image || DEFAULT_IMAGE;
     }
   } else {
     hiddenImageInput.value = 'img/AI_collection_of_courses__91624375__92666607.png';
+    document.getElementById('item-image-description').value = 'Example: Colleagues collaborating around a table during a learning workshop.';
   }
   updateDialogMetadata(activeItem);
   dialog.classList.remove('hidden');
@@ -1983,6 +2021,7 @@ if (itemForm) {
       link: String(formData.get('link') || '').trim() || 'https://example.com',
       text: String(formData.get('text') || '').trim(),
       info: String(formData.get('info') || '').trim() || 'New item',
+      imageDescription: String(formData.get('imageDescription') || '').trim().slice(0, 200),
       size: formData.get('size') || 'standard',
       owner: existingItem?.owner || 'Laurent',
       encodedAt: existingItem?.encodedAt || catalogueEncodedAt,

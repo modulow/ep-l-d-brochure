@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>L&D Catalogue 2026</title>
-    <link rel="stylesheet" href="styles.css?publish-20260909-7" />
+    <link rel="stylesheet" href="styles.css?v=local-image-descriptions-1" />
   </head>
   <body>
     <a class="skip-link" href="#app">Skip to main content</a>
@@ -29,7 +29,7 @@
             <span class="section-label">PDF EXPORT</span>
             <h2 id="pdf-config-title">Prepare your catalogue</h2>
           </div>
-          <button id="pdf-config-close" class="close-dialog" type="button" aria-label="Close PDF options">Ã—</button>
+          <button id="pdf-config-close" class="close-dialog" type="button" aria-label="Close PDF options">×</button>
         </div>
         <p class="pdf-config-modal__status" id="pdf-config-status" aria-live="polite">Preparing images in the background...</p>
         <div class="pdf-config-modal__actions">
@@ -54,7 +54,7 @@
       <div class="admin-panel__card">
         <div class="admin-panel__header">
           <h3>Catalogue manager</h3>
-          <button id="close-admin" class="close-dialog" type="button" aria-label="Close admin">Ã—</button>
+          <button id="close-admin" class="close-dialog" type="button" aria-label="Close admin">×</button>
         </div>
         <form id="admin-form">
           <div class="field-group">
@@ -77,7 +77,7 @@
       <div class="dialog-panel">
         <div class="dialog-header">
           <h3 id="item-dialog-title">Add item</h3>
-          <button type="button" class="close-dialog" aria-label="Close dialog">Ã—</button>
+          <button type="button" class="close-dialog" aria-label="Close dialog">×</button>
         </div>
 
         <form id="item-form">
@@ -101,7 +101,13 @@
 
           <div class="field-group">
             <label for="item-info">Info line</label>
-            <input id="item-info" name="info" type="text" placeholder="2h â€¢ On-demand" />
+            <input id="item-info" name="info" type="text" placeholder="2h • On-demand" />
+          </div>
+
+          <div class="field-group">
+            <label for="item-image-description">Image description for accessibility</label>
+            <textarea id="item-image-description" name="imageDescription" rows="3" maxlength="200" placeholder="Example: Colleagues collaborating around a table during a learning workshop."></textarea>
+            <small class="field-help">Maximum 200 characters. This text is shown instead of the image in accessibility mode.</small>
           </div>
 
           <div class="field-row">
@@ -123,7 +129,7 @@
 
           <div class="item-meta-panel" aria-live="polite">
             <div>
-              <span>PropriÃ©taire</span>
+              <span>Propriétaire</span>
               <strong id="item-owner-meta">Laurent</strong>
             </div>
             <div>
@@ -140,7 +146,7 @@
       </div>
     </div>
 
-    <script src="catalogue-data.js?publish-20260909-7"></script>
-    <script src="app.js?publish-20260909-7"></script>
+    <script src="catalogue-data.js?v=local-cover-year-smooth-1"></script>
+    <script src="app.js?v=local-image-descriptions-1"></script>
   </body>
 </html>
