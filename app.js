@@ -47,20 +47,38 @@ window.setTimeout(() => {
     titleMark.classList.add('is-set');
     titleMark.style.setProperty('margin-left', '0.03em', 'important');
   });
-  const coverTitle = document.querySelector('.cover-title-heading');
-  const coverYear = document.querySelector('.cover-year__text');
-  coverTitle?.animate([
-    { transform: 'translateY(-120vh)' },
-    { transform: 'translateY(0)' }
-  ], { duration: 820, easing: 'ease-out', fill: 'forwards' });
-  coverYear?.animate([
-    { transform: 'translateY(120vh)' },
-    { transform: 'translateY(0)' }
-  ], { duration: 820, easing: 'ease-out', fill: 'forwards' });
-}, 2000);
+  if (window.matchMedia('(min-width: 641px)').matches) {
+    const coverTitle = document.querySelector('.cover-title-heading');
+    const coverYear = document.querySelector('.cover-year__text');
+    coverTitle?.animate([
+      { transform: 'translateY(-120vh)' },
+      { transform: 'translateY(0)' }
+    ], { duration: 820, easing: 'ease-out', fill: 'forwards' });
+    coverYear?.animate([
+      { transform: 'translateY(120vh)' },
+      { transform: 'translateY(0)' }
+    ], { duration: 820, easing: 'ease-out', fill: 'forwards' });
+  }
+}, 1000);
 
 window.setTimeout(() => {
   document.querySelector('.admin-bar__inner')?.animate([
+    { transform: 'translateY(120vh)' },
+    { transform: 'translateY(0)' }
+  ], {
+    duration: 820,
+    easing: 'ease-out',
+    fill: 'forwards'
+  });
+  document.getElementById('pdf-export-toggle')?.animate([
+    { transform: 'translateY(120vh)' },
+    { transform: 'translateY(0)' }
+  ], {
+    duration: 820,
+    easing: 'ease-out',
+    fill: 'forwards'
+  });
+  document.getElementById('accessibility-toggle')?.animate([
     { transform: 'translateY(120vh)' },
     { transform: 'translateY(0)' }
   ], {
@@ -624,8 +642,28 @@ function getInitialSectionData() {
 }
 
 const sectionData = getInitialSectionData();
-const initialHashSection = sectionData.find((section) => section.id === window.location.hash.slice(1))?.id;
-let selectedSectionId = initialHashSection || (window.matchMedia('(max-width: 640px)').matches ? sectionData[0]?.id : null);
+const isMobile = window.matchMedia('(max-width: 640px)').matches;
+const cleanPageUrl = window.location.href.split('#')[0];
+const initialHash = window.location.hash;
+let ignoreReloadHash = Boolean(initialHash);
+if (initialHash) {
+  history.replaceState({}, '', cleanPageUrl);
+  window.setTimeout(() => history.replaceState({}, '', cleanPageUrl), 0);
+}
+let isInitialHashChange = Boolean(initialHash);
+let isReloading = true;
+window.setTimeout(() => { isInitialHashChange = false; }, 1000);
+window.setTimeout(() => { isReloading = false; }, 2000);
+window.setTimeout(() => {
+  if (window.location.hash !== initialHash || !initialHash) return;
+  window.location.hash = '';
+  history.replaceState({}, '', cleanPageUrl);
+  ignoreReloadHash = true;
+  selectedSectionId = isMobile ? sectionData[0]?.id : null;
+  renderApp({ keepSectionTransition: true });
+  window.setTimeout(() => { ignoreReloadHash = false; }, 500);
+}, 1100);
+let selectedSectionId = isMobile ? sectionData[0]?.id : null;
 let coverRemoved = false;
 
 function getDemoTimestamp(itemIndex, editIndex) {
@@ -1013,9 +1051,11 @@ function renderItem(item, sectionId, index) {
   const enrolButton = item.link
     ? `<a class="link-btn" href="${item.link}" target="_blank" rel="noreferrer">${actionLabel}</a>`
     : `<span class="link-btn link-btn--disabled" aria-disabled="true">${actionLabel}</span>`;
+  // Items above the fold render fully visible immediately; only later items lazy-reveal.
+  const isAboveTheFold = index < 4;
 
   return `
-    <article class="item-card is-loading ${sizeClass}" id="${slugify(`${sectionId}-${item.title}`)}" data-like-key="${likeKey}" data-item-index="${index}" draggable="${isLoggedIn}">
+    <article class="item-card ${isAboveTheFold ? '' : 'is-loading'} ${sizeClass}" id="${slugify(`${sectionId}-${item.title}`)}" data-like-key="${likeKey}" data-item-index="${index}" draggable="${isLoggedIn}">
       <div class="item-content">
         <h3>${item.title}</h3>
         ${summaryText ? `<p>${summaryText}</p>` : ''}
@@ -1123,11 +1163,11 @@ function renderSectionPage(section) {
   `;
 }
 
-function renderApp({ keepSectionTransition = false } = {}) {
+function renderApp({ keepSectionTransition = false, deferSectionOpen = false } = {}) {
   const hashSectionId = window.location.hash.slice(1);
-  if (sectionData.some((section) => section.id === hashSectionId)) selectedSectionId = hashSectionId;
+  if (!isReloading && !ignoreReloadHash && !isInitialHashChange && sectionData.some((section) => section.id === hashSectionId)) selectedSectionId = hashSectionId;
   const selectedSection = sectionData.find((section) => section.id === selectedSectionId);
-  app.classList.toggle('is-section-open', Boolean(selectedSection));
+  app.classList.toggle('is-section-open', Boolean(selectedSection) && !deferSectionOpen);
   if (window.matchMedia('(min-width: 641px)').matches && !app.dataset.coverIntroInitialized) {
     app.classList.add('is-cover-intro');
     app.dataset.coverIntroInitialized = 'true';
@@ -1139,7 +1179,7 @@ function renderApp({ keepSectionTransition = false } = {}) {
     ...(selectedSection ? [renderSectionPage(selectedSection)] : []),
     renderUserLikesFooter(),
     renderUserPinsPanel(),
-    ...(selectedSection ? [renderFloatingSectionMenu(), renderFloatingSearchPanel()] : []),
+    ...(selectedSection && window.matchMedia('(min-width: 641px)').matches ? [renderFloatingSectionMenu(), renderFloatingSearchPanel()] : []),
     renderSectionTransitionOverlay()
   ].join('');
 
@@ -1148,6 +1188,7 @@ function renderApp({ keepSectionTransition = false } = {}) {
 }
 
 window.addEventListener('hashchange', () => {
+  if (isReloading || window.location.hash === initialHash) return;
   const hashSectionId = window.location.hash.slice(1);
   if (!sectionData.some((section) => section.id === hashSectionId)) return;
   selectedSectionId = hashSectionId;
@@ -1288,13 +1329,28 @@ function bindGlobalActions() {
         return;
       }
       const shouldClose = nextSectionId === selectedSectionId;
-      app.classList.add('is-section-transitioning');
-      window.setTimeout(() => {
-        selectedSectionId = shouldClose ? null : nextSectionId;
-        history.pushState({}, '', shouldClose ? window.location.pathname : `#${selectedSectionId}`);
-        renderApp({ keepSectionTransition: true });
-        window.requestAnimationFrame(() => app.classList.remove('is-section-transitioning'));
-      }, 420);
+      const isDesktopSwipe = window.matchMedia('(min-width: 641px)').matches;
+      if (shouldClose || !isDesktopSwipe) {
+        app.classList.add('is-section-transitioning');
+        window.setTimeout(() => {
+          selectedSectionId = shouldClose ? null : nextSectionId;
+          history.pushState({}, '', shouldClose ? window.location.pathname : `#${selectedSectionId}`);
+          renderApp({ keepSectionTransition: true });
+          window.requestAnimationFrame(() => app.classList.remove('is-section-transitioning'));
+        }, 420);
+        return;
+      }
+      // Desktop: render the destination section immediately (off-screen) so its
+      // title/content are ready before the slide starts, then animate the swipe.
+      selectedSectionId = nextSectionId;
+      history.pushState({}, '', `#${selectedSectionId}`);
+      renderApp({ keepSectionTransition: true, deferSectionOpen: true });
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          app.classList.add('is-section-open');
+          window.dispatchEvent(new Event('scroll'));
+        });
+      });
     });
 
     const enlargeCard = () => {
@@ -1457,6 +1513,30 @@ function bindGlobalActions() {
 
   window.addEventListener('scroll', updateSectionHeaders, { passive: true });
   updateSectionHeaders();
+
+  document.querySelectorAll('.section-page').forEach((sectionPage) => {
+    const hero = sectionPage.querySelector('.section-hero');
+    if (!hero) return;
+    let condensedFrame = null;
+    const applyCondensed = () => {
+      condensedFrame = null;
+      // Hysteresis avoids rapid class toggling (flicker) when the scroll
+      // position hovers right around the condense threshold.
+      const isCondensed = hero.classList.contains('is-condensed');
+      const scrollTop = sectionPage.scrollTop;
+      if (!isCondensed && scrollTop > 40) {
+        hero.classList.add('is-condensed');
+      } else if (isCondensed && scrollTop < 16) {
+        hero.classList.remove('is-condensed');
+      }
+    };
+    const updateCondensedHero = () => {
+      if (condensedFrame) return;
+      condensedFrame = window.requestAnimationFrame(applyCondensed);
+    };
+    sectionPage.addEventListener('scroll', updateCondensedHero, { passive: true });
+    updateCondensedHero();
+  });
 
   const itemObserver = new IntersectionObserver((entries, observer) => {
     entries.forEach((entry) => {
