@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>L&D Catalogue 2026</title>
+    <link rel="stylesheet" href="styles.css?v=20260911-cover-dom-transition" />
+  </head>
+  <body>
+    <a class="skip-link" href="#app">Skip to main content</a>
+    <div id="app-loader" class="app-loader" aria-label="Loading brochure">
+      <img src="ep_logo_loader.webp" alt="" />
+    </div>
+
+    <div id="app"></div>
+
+    <button id="accessibility-toggle" class="accessibility-toggle" type="button" aria-pressed="false" aria-label="Enable accessibility mode">
+      Accessibility: off
+    </button>
+
+    <div id="pdf-config-modal" class="pdf-config-modal" hidden aria-hidden="true">
+      <div class="pdf-config-modal__panel" role="dialog" aria-modal="true" aria-labelledby="pdf-config-title">
+        <div class="pdf-config-modal__header">
+          <div>
+            <span class="section-label">PDF EXPORT</span>
+            <h2 id="pdf-config-title">Prepare your catalogue</h2>
+          </div>
+          <button id="pdf-config-close" class="close-dialog" type="button" aria-label="Close PDF options">×</button>
+        </div>
+        <p class="pdf-config-modal__status" id="pdf-config-status" aria-live="polite">Preparing images in the background...</p>
+        <div class="pdf-config-modal__actions">
+          <button id="pdf-select-all" class="secondary-btn" type="button">Select all</button>
+          <button id="pdf-generate" class="primary-btn" type="button" disabled>Generate PDF</button>
+        </div>
+        <div id="pdf-section-list" class="pdf-config-modal__sections"></div>
+      </div>
+    </div>
+
+    <div id="admin-panel" class="admin-panel hidden">
+      <div class="admin-panel__card">
+        <div class="admin-panel__header">
+          <h3>Catalogue manager</h3>
+          <button id="close-admin" class="close-dialog" type="button" aria-label="Close admin">×</button>
+        </div>
+        <form id="admin-form">
+          <div class="field-group">
+            <label for="admin-user">Username</label>
+            <input id="admin-user" type="text" value="admin" />
+          </div>
+          <div class="field-group">
+            <label for="admin-pass">Password</label>
+            <input id="admin-pass" type="password" value="catalogue" />
+          </div>
+          <div class="dialog-actions">
+            <button type="button" class="secondary-btn" id="cancel-admin">Cancel</button>
+            <button type="submit" class="primary-btn">Log in</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="admin-bar" class="admin-bar">
+      <div class="admin-help-bubble">Switch to learner and pin your trainings</div>
+      <div class="admin-bar__inner">
+        <span class="admin-label">Admin</span>
+        <a id="login-toggle" class="mini-btn" href="login.html">Log in</a>
+        <span class="admin-label user-label">Learner</span>
+        <button id="user-toggle" class="mini-btn" type="button">Start</button>
+      </div>
+    </div>
+
+    <div id="item-dialog" class="dialog hidden" aria-modal="true" role="dialog">
+      <div class="dialog-panel">
+        <div class="dialog-header">
+          <h3 id="item-dialog-title">Add item</h3>
+          <button type="button" class="close-dialog" aria-label="Close dialog">×</button>
+        </div>
+
+        <form id="item-form">
+          <input type="hidden" id="section-id" />
+          <input type="hidden" id="item-index" value="" />
+
+          <div class="field-group">
+            <label for="item-title">Title</label>
+            <input id="item-title" name="title" type="text" required />
+          </div>
+
+          <div class="field-group">
+            <label for="item-link">Link</label>
+            <input id="item-link" name="link" type="url" placeholder="https://" />
+          </div>
+
+          <div class="field-group">
+            <label for="item-text">Text</label>
+            <textarea id="item-text" name="text" rows="3" required></textarea>
+          </div>
+
+          <div class="field-group">
+            <label for="item-info">Info line</label>
+            <input id="item-info" name="info" type="text" placeholder="2h • On-demand" />
+          </div>
+
+          <div class="field-group">
+            <label for="item-image-description">Image description for accessibility</label>
+            <textarea id="item-image-description" name="imageDescription" rows="3" maxlength="200" placeholder="Example: Colleagues collaborating around a table during a learning workshop."></textarea>
+            <small class="field-help">Maximum 200 characters. This text is shown instead of the image in accessibility mode.</small>
+          </div>
+
+          <div class="field-row">
+            <div class="field-group">
+              <label for="item-size">Layout</label>
+              <select id="item-size" name="size">
+                <option value="standard">Standard card</option>
+                <option value="wide">Two-column card</option>
+              </select>
+            </div>
+
+            <div class="field-group">
+              <label for="item-image-file">Image file</label>
+              <input id="item-image-file" type="file" accept="image/*" />
+            </div>
+          </div>
+
+          <input id="item-image-url" name="image" type="hidden" />
+
+          <div class="item-meta-panel" aria-live="polite">
+            <div>
+              <span>Propriétaire</span>
+              <strong id="item-owner-meta">Laurent</strong>
+            </div>
+            <div>
+              <span>Editions</span>
+              <ul id="item-edit-history-meta"></ul>
+            </div>
+          </div>
+
+          <div class="dialog-actions">
+            <button type="button" class="secondary-btn" id="cancel-item">Cancel</button>
+            <button type="submit" class="primary-btn">Save item</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="catalogue-data.js?v=20260911-cover-dom-transition"></script>
+    <script src="app.js?v=20260911-cover-dom-transition"></script>
+  </body>
+</html>
