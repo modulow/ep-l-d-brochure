@@ -725,6 +725,7 @@ window.setTimeout(() => {
 }, 1100);
 let selectedSectionId = isMobile ? sectionData[0]?.id : null;
 let coverRemoved = false;
+let menuFullyRevealed = false;
 
 function getDemoTimestamp(itemIndex, editIndex) {
   const date = new Date(catalogueEncodedAt);
@@ -1608,7 +1609,6 @@ function bindGlobalActions() {
     };
     sectionPage.addEventListener('scroll', updateCondensedHero, { passive: true });
     window.addEventListener('scroll', updateCondensedHero, { passive: true });
-    updateCondensedHero();
   });
 
   const itemObserver = new IntersectionObserver((entries, observer) => {
@@ -1627,6 +1627,7 @@ function bindGlobalActions() {
     entries.forEach((entry) => {
       if (!entry.isIntersecting) return;
       entry.target.classList.add('is-visible');
+      menuFullyRevealed = true;
       if (window.scrollY > 40 || document.body.classList.contains('is-cover-finished')) {
         window.revealAdminCapsules?.();
       }
@@ -1634,7 +1635,14 @@ function bindGlobalActions() {
     });
   }, { rootMargin: '80px 0px', threshold: 0.05 });
 
-  document.querySelectorAll('.menu-card').forEach((card) => menuCardObserver.observe(card));
+  document.querySelectorAll('.menu-card').forEach((card) => {
+    // Avoid replaying the drop-in intro every time renderApp() recreates the DOM.
+    if (menuFullyRevealed) {
+      card.classList.add('is-visible');
+      return;
+    }
+    menuCardObserver.observe(card);
+  });
 
   const sectionHeroObserver = new IntersectionObserver((entries, observer) => {
     entries.forEach((entry) => {
@@ -2271,6 +2279,7 @@ if (window.matchMedia('(min-width: 641px)').matches) {
     cover.classList.add('is-exiting');
     window.setTimeout(() => {
       document.querySelectorAll('.menu-card').forEach((card) => card.classList.add('is-visible'));
+      menuFullyRevealed = true;
       cover.remove();
       coverRemoved = true;
       app.classList.remove('is-cover-intro');
