@@ -691,7 +691,6 @@ img { display: block; max-width: 100%; }
 .section-page {
   background: #f8fafc;
   padding-top: 12px;
-  container-type: scroll-state;
 }
 
 /* Bouton retour posé sur la bande de rectangles de couleur restée visible à gauche. */
@@ -3013,8 +3012,8 @@ textarea { resize: vertical; }
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .item-card { grid-column: span 4; }
-  .item-card--wide { grid-column: span 8; }
+  .item-card { grid-column: span 6; }
+  .item-card--wide { grid-column: span 12; }
   .dashboard-profiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dashboard-recent li { grid-template-columns: 1fr; gap: 4px; }
   .user-pins-footer { grid-template-columns: 1fr; }
