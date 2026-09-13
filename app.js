@@ -1211,6 +1211,7 @@ function renderSectionPage(section) {
 
   return `
     <section class="page section-page" id="${section.id}">
+      <div class="section-hero-sentinel" aria-hidden="true"></div>
       <div class="section-hero section-hero--${section.index}">
         <div class="section-hero__label">${section.index}</div>
         <h2>${section.title}</h2>
@@ -1587,19 +1588,21 @@ function bindGlobalActions() {
 
   document.querySelectorAll('.section-page').forEach((sectionPage) => {
     const hero = sectionPage.querySelector('.section-hero');
-    if (!hero) return;
+    const sentinel = sectionPage.querySelector('.section-hero-sentinel');
+    if (!hero || !sentinel) return;
     let condensedFrame = null;
     const applyCondensed = () => {
       condensedFrame = null;
       // Hysteresis avoids rapid class toggling (flicker) when the scroll
       // position hovers right around the condense threshold.
+      // Measured from the sentinel (not the sticky hero itself) because a
+      // stuck sticky element's own rect.top is clamped to 0 and can't tell
+      // us how far the user has actually scrolled past it.
       const isCondensed = hero.classList.contains('is-condensed');
-      // getBoundingClientRect().top works for both the desktop internal
-      // scroll container and the mobile document scroll.
-      const top = hero.getBoundingClientRect().top;
-      if (!isCondensed && top <= 0) {
+      const top = sentinel.getBoundingClientRect().top;
+      if (!isCondensed && top <= -40) {
         hero.classList.add('is-condensed');
-      } else if (isCondensed && top > 24) {
+      } else if (isCondensed && top > -16) {
         hero.classList.remove('is-condensed');
       }
     };

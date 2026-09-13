@@ -739,6 +739,12 @@ img { display: block; max-width: 100%; }
   .section-back-edge__arrow { animation: none; }
 }
 
+.section-hero-sentinel {
+  height: 0;
+  margin: 0;
+  padding: 0;
+}
+
 .section-hero {
   width: min(1280px, 100%);
   margin: -12px auto 0;
