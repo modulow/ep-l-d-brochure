@@ -61,7 +61,10 @@ window.setTimeout(() => {
   }
 }, 1000);
 
-window.setTimeout(() => {
+let capsulesRevealed = false;
+window.revealAdminCapsules = () => {
+  if (capsulesRevealed) return;
+  capsulesRevealed = true;
   document.querySelector('.admin-bar__inner')?.animate([
     { transform: 'translateY(120vh)' },
     { transform: 'translateY(0)' }
@@ -86,7 +89,7 @@ window.setTimeout(() => {
     easing: 'ease-out',
     fill: 'forwards'
   });
-}, 4000);
+};
 
 window.setTimeout(() => {
   const bubble = document.querySelector('.admin-help-bubble');
@@ -427,6 +430,25 @@ const pageTwoSections = [
   ['faq', '14', 'FAQ']
 ];
 
+// Grande image de titre de section, reprise du moodboard brochuere26_moodboard-7.
+// Les versions de img/hero sont redimensionnées à 1600px pour un affichage immédiat pendant l'animation.
+const sectionHeroImages = {
+  'eu-policies': 'img/hero/AdobeStock_393554767.jpg',
+  'ep-work-tools': 'img/hero/AdobeStock_1841199690.jpg',
+  'digital-competences': 'img/hero/AdobeStock_1769855883.jpg',
+  'language-courses': 'img/hero/AdobeStock_285405573.jpg',
+  'communication-competencies': 'img/hero/Train_the_Trainer_postits_94737584.jpg',
+  'finance-tools': 'img/hero/AdobeStock_275122613.jpg',
+  'mep-apa-training': 'img/hero/AdobeStock_132223860.jpg',
+  'ethics-data-protection': 'img/hero/AdobeStock_636618298.jpg',
+  'career-development': 'img/hero/AdobeStock_373166994.jpg',
+  wellbeing: 'img/hero/AdobeStock_609514149.jpg',
+  'newcomers-mandatory': 'img/hero/AdobeStock_927649042.jpg',
+  'jean-monnet-academy': 'img/OIP.e14cDZ4gCSoSYTWBaL8KNwHaFk.webp',
+  'ep-talks-webinars': 'img/ep_talk_faces_main_template_EUL_90430580.png',
+  faq: 'img/screenshot eul.png'
+};
+
 const pdfSectionOneItems = [
   ['EP Powers and EU Policies', 'EP_Powers_and_EU_Policies_90705421.png'],
   ['Rules of Procedure', 'LEX_Rules_of_Procedure_and_Beyond_640x365_57244569.jpg'],
@@ -616,16 +638,53 @@ function applyAuthoritativeCatalogueItems() {
   }));
 }
 
+function withSectionHeroImages(data) {
+  return data.map((section) => (
+    sectionHeroImages[section.id]
+      ? { ...section, heroImage: sectionHeroImages[section.id] }
+      : section
+  ));
+}
+
+// Précharge l'image de section et ses 4 premiers items pour qu'ils soient déjà affichables pendant l'animation de révélation.
+const preloadedMedia = [];
+function preloadSectionMedia(data) {
+  const seen = new Set();
+  const preload = (src) => {
+    const href = safeImage(src);
+    if (!href || seen.has(href)) return;
+    seen.add(href);
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'image';
+    link.href = href;
+    document.head.appendChild(link);
+    // Garder l'image décodée en mémoire évite le décodage tardif au moment du rendu de la section.
+    const image = new Image();
+    image.src = href;
+    preloadedMedia.push(image);
+    if (image.decode) image.decode().catch(() => {});
+  };
+
+  data.forEach((section) => {
+    preload(section.heroImage);
+    [...(section.items || [])]
+      .sort((first, second) => (first.displayOrder ?? 0) - (second.displayOrder ?? 0))
+      .slice(0, 4)
+      .forEach((item) => preload(item.image));
+  });
+}
+
 function getInitialSectionData() {
   const authoritative = window.authoritativeCatalogueItems?.length
     ? applyAuthoritativeCatalogueItems()
     : applyPageTwoSections(addMissingCatalogueItems(normalizeSectionData(baseSectionData)));
   const saved = loadCatalogueState();
-  if (!Array.isArray(saved)) return authoritative;
+  if (!Array.isArray(saved)) return withSectionHeroImages(authoritative);
 
   const itemKey = (item) => normalizeTitleKey(item?.title);
   const savedMap = new Map(saved.map((section) => [section.id, section]));
-  return authoritative.map((section) => {
+  return withSectionHeroImages(authoritative.map((section) => {
     const savedSection = savedMap.get(section.id);
     if (!savedSection || !Array.isArray(savedSection.items)) return section;
 
@@ -638,10 +697,11 @@ function getInitialSectionData() {
     });
 
     return { ...section, heroImage: savedSection.heroImage || section.heroImage, items: mergedItems };
-  });
+  }));
 }
 
 const sectionData = getInitialSectionData();
+preloadSectionMedia(sectionData);
 const isMobile = window.matchMedia('(max-width: 640px)').matches;
 const cleanPageUrl = window.location.href.split('#')[0];
 const initialHash = window.location.hash;
@@ -944,6 +1004,8 @@ function renderMenu() {
 
   const cards = sectionData.map((section, index) => `
     <a class="menu-card ${palette[index % palette.length]}" href="#${section.id}" data-menu-index="${index}" style="--menu-delay: ${index * 70}ms" aria-label="Open ${section.title}">
+      <span class="menu-card__count">${section.items.length} courses</span>
+      <img class="menu-card__image" src="${safeImage(section.heroImage)}" alt="" aria-hidden="true" loading="eager" decoding="sync" />
       <div class="menu-card__content">
         <span class="menu-card__number">${section.index}</span>
         <div class="menu-card__title">${section.title}</div>
@@ -988,6 +1050,14 @@ window.revealItemCard = (card) => {
   window.setTimeout(() => card.classList.remove('is-loading'), 500);
 };
 
+function renderSectionBackEdge() {
+  return `
+    <button class="section-back-edge" type="button" aria-label="Back to the sections menu" title="Back to sections">
+      <span class="section-back-edge__arrow" aria-hidden="true"></span>
+    </button>
+  `;
+}
+
 function renderFloatingSectionMenu() {
   const links = sectionData.map((section) => `
     <a class="section-menu-link section-menu-link--${section.index}" href="#${section.id}">
@@ -1011,7 +1081,7 @@ function renderFloatingSectionMenu() {
 
 function renderFloatingSearchPanel() {
   const results = sectionData.flatMap((section) => section.items.map((item) => `
-    <a class="search-result" href="#${slugify(`${section.id}-${item.title}`)}" data-search-text="${`${item.title} ${item.text} ${item.info} ${section.title}`.toLowerCase()}">
+    <a class="search-result" href="#${slugify(`${section.id}-${item.title}`)}" data-section-id="${section.id}" data-search-text="${`${item.title} ${item.text} ${item.info} ${section.title}`.toLowerCase()}">
       <img src="${safeImage(item.image)}" alt="" loading="lazy" />
       <span>${section.index}</span>
       <strong>${item.title}</strong>
@@ -1057,7 +1127,7 @@ function renderItem(item, sectionId, index) {
   return `
     <article class="item-card ${isAboveTheFold ? '' : 'is-loading'} ${sizeClass}" id="${slugify(`${sectionId}-${item.title}`)}" data-like-key="${likeKey}" data-item-index="${index}" draggable="${isLoggedIn}">
       <div class="item-content">
-        <h3>${item.title}</h3>
+        <h3 title="${item.title.replace(/"/g, '&quot;')}">${item.title}</h3>
         ${summaryText ? `<p>${summaryText}</p>` : ''}
         <div class="item-footer">
           <span class="item-info">
@@ -1146,7 +1216,7 @@ function renderSectionPage(section) {
       </div>
       <div class="section-hero__image">
         ${isLoggedIn ? `<button class="secondary-btn change-section-image-btn section-image-admin-btn" type="button" data-section-id="${section.id}">Change image</button>` : ''}
-        <img src="${safeImage(section.heroImage)}" alt="${section.title}" loading="eager" decoding="async" onload="this.classList.add('is-loaded');this.closest('.section-hero__image').classList.add('is-loaded');" onerror="this.onerror=null;this.src='${DEFAULT_IMAGE}';this.classList.add('is-loaded');this.closest('.section-hero__image').classList.add('is-loaded');" />
+        <img src="${safeImage(section.heroImage)}" alt="${section.title}" loading="eager" decoding="sync" fetchpriority="high" onload="this.classList.add('is-loaded');this.closest('.section-hero__image').classList.add('is-loaded');" onerror="this.onerror=null;this.src='${DEFAULT_IMAGE}';this.classList.add('is-loaded');this.closest('.section-hero__image').classList.add('is-loaded');" />
       </div>
 
       <div class="container">
@@ -1179,7 +1249,7 @@ function renderApp({ keepSectionTransition = false, deferSectionOpen = false } =
     ...(selectedSection ? [renderSectionPage(selectedSection)] : []),
     renderUserLikesFooter(),
     renderUserPinsPanel(),
-    ...(selectedSection && window.matchMedia('(min-width: 641px)').matches ? [renderFloatingSectionMenu(), renderFloatingSearchPanel()] : []),
+    ...(selectedSection && window.matchMedia('(min-width: 641px)').matches ? [renderSectionBackEdge(), renderFloatingSectionMenu(), renderFloatingSearchPanel()] : []),
     renderSectionTransitionOverlay()
   ].join('');
 
@@ -1259,7 +1329,7 @@ function bindGlobalActions() {
       populatePdfSections();
       pdfReady = false;
       if (pdfGenerate) pdfGenerate.disabled = true;
-      if (pdfStatus) pdfStatus.textContent = 'Ready. Images are excluded to create the PDF faster.';
+      if (pdfStatus) pdfStatus.textContent = 'Ready. Images are excluded to save paper.';
       pdfReady = true;
       if (pdfGenerate) pdfGenerate.disabled = false;
       setPdfModalOpen(true);
@@ -1523,10 +1593,12 @@ function bindGlobalActions() {
       // Hysteresis avoids rapid class toggling (flicker) when the scroll
       // position hovers right around the condense threshold.
       const isCondensed = hero.classList.contains('is-condensed');
-      const scrollTop = sectionPage.scrollTop;
-      if (!isCondensed && scrollTop > 40) {
+      // getBoundingClientRect().top works for both the desktop internal
+      // scroll container and the mobile document scroll.
+      const top = hero.getBoundingClientRect().top;
+      if (!isCondensed && top <= 0) {
         hero.classList.add('is-condensed');
-      } else if (isCondensed && scrollTop < 16) {
+      } else if (isCondensed && top > 24) {
         hero.classList.remove('is-condensed');
       }
     };
@@ -1535,6 +1607,7 @@ function bindGlobalActions() {
       condensedFrame = window.requestAnimationFrame(applyCondensed);
     };
     sectionPage.addEventListener('scroll', updateCondensedHero, { passive: true });
+    window.addEventListener('scroll', updateCondensedHero, { passive: true });
     updateCondensedHero();
   });
 
@@ -1554,6 +1627,9 @@ function bindGlobalActions() {
     entries.forEach((entry) => {
       if (!entry.isIntersecting) return;
       entry.target.classList.add('is-visible');
+      if (window.scrollY > 40 || document.body.classList.contains('is-cover-finished')) {
+        window.revealAdminCapsules?.();
+      }
       observer.unobserve(entry.target);
     });
   }, { rootMargin: '80px 0px', threshold: 0.05 });
@@ -1609,6 +1685,39 @@ function bindGlobalActions() {
       target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 90);
   };
+
+  // Une seule section est rendue à la fois : il faut la monter avant de pouvoir y naviguer.
+  const openSectionById = (nextSectionId) => {
+    if (!nextSectionId || !sectionData.some((section) => section.id === nextSectionId)) return;
+    if (document.getElementById(nextSectionId)) {
+      navigateToSection(nextSectionId);
+      return;
+    }
+    selectedSectionId = nextSectionId;
+    history.pushState({}, '', `#${nextSectionId}`);
+    const isDesktopSwipe = window.matchMedia('(min-width: 641px)').matches;
+    renderApp({ keepSectionTransition: true, deferSectionOpen: isDesktopSwipe });
+    if (!isDesktopSwipe) return;
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        app.classList.add('is-section-open');
+        window.dispatchEvent(new Event('scroll'));
+      });
+    });
+  };
+
+  const closeSectionToMenu = () => {
+    if (!selectedSectionId) return;
+    app.classList.add('is-section-transitioning');
+    window.setTimeout(() => {
+      selectedSectionId = null;
+      history.pushState({}, '', window.location.pathname);
+      renderApp({ keepSectionTransition: true });
+      window.requestAnimationFrame(() => app.classList.remove('is-section-transitioning'));
+    }, 420);
+  };
+
+  document.querySelector('.section-back-edge')?.addEventListener('click', closeSectionToMenu);
 
   const menuPage = document.querySelector('.menu-page');
   const floatingMenu = document.querySelector('.floating-section-menu');
@@ -1716,11 +1825,10 @@ function bindGlobalActions() {
     });
   });
 
-  document.querySelectorAll('.section-menu-link').forEach((link) => {
+  document.querySelectorAll('.section-nav .section-menu-link').forEach((link) => {
     link.addEventListener('click', (event) => {
       event.preventDefault();
-      const target = document.getElementById(link.getAttribute('href').slice(1));
-      if (target) navigateToSection(target.id);
+      openSectionById(link.getAttribute('href').slice(1));
       const menu = link.closest('.section-nav');
       menu?.querySelector('.section-menu-list')?.classList.remove('is-open');
       menu?.querySelector('.section-menu-toggle')?.setAttribute('aria-expanded', 'false');
@@ -1751,8 +1859,7 @@ function bindGlobalActions() {
   document.querySelectorAll('.floating-section-menu .section-menu-link').forEach((link) => {
     link.addEventListener('click', (event) => {
       event.preventDefault();
-      const target = document.getElementById(link.getAttribute('href').slice(1));
-      if (target) navigateToSection(target.id);
+      openSectionById(link.getAttribute('href').slice(1));
       const menu = link.closest('.floating-section-menu');
       menu?.querySelector('.section-menu-list')?.classList.remove('is-open');
       menu?.setAttribute('data-clicked-open', 'false');
@@ -1884,11 +1991,17 @@ function bindGlobalActions() {
     results.forEach((link) => {
       link.addEventListener('click', (event) => {
         event.preventDefault();
-        const target = document.getElementById(link.getAttribute('href').slice(1));
-        if (target) {
-          holdOverlayAfterScroll();
-          const targetTop = target.getBoundingClientRect().top + window.scrollY;
-          window.scrollTo({ top: Math.max(0, targetTop - 120), behavior: 'smooth' });
+        const itemId = link.getAttribute('href').slice(1);
+        const sectionId = link.getAttribute('data-section-id');
+        const scrollToItem = () => {
+          const target = document.getElementById(itemId);
+          target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        };
+        if (sectionId) {
+          openSectionById(sectionId);
+          window.setTimeout(scrollToItem, 480);
+        } else {
+          scrollToItem();
         }
         search.classList.remove('is-open');
         toggle?.setAttribute('aria-expanded', 'false');
@@ -2162,6 +2275,7 @@ if (window.matchMedia('(min-width: 641px)').matches) {
       coverRemoved = true;
       app.classList.remove('is-cover-intro');
       document.body.classList.add('is-cover-finished');
+      window.revealAdminCapsules?.();
     }, 900);
-  }, 6000);
+  }, 3000);
 }
