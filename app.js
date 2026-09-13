@@ -1639,9 +1639,13 @@ function bindGlobalActions() {
   }, { rootMargin: '80px 0px', threshold: 0.05 });
 
   document.querySelectorAll('.menu-card').forEach((card) => {
-    // Avoid replaying the drop-in intro every time renderApp() recreates the DOM.
+    // Avoid replaying the drop-in intro every time renderApp() recreates the DOM:
+    // add is-visible with transitions suppressed for one frame so it snaps in place.
     if (menuFullyRevealed) {
-      card.classList.add('is-visible');
+      card.classList.add('is-visible', 'no-anim');
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => card.classList.remove('no-anim'));
+      });
       return;
     }
     menuCardObserver.observe(card);

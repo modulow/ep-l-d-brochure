@@ -542,6 +542,10 @@ img { display: block; max-width: 100%; }
   transform: translateY(0);
 }
 
+.menu-card.no-anim {
+  transition: none !important;
+}
+
 .menu-card:hover,
 .menu-card:focus-visible,
 .menu-card.is-hovered {
