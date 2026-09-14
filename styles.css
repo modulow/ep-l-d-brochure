@@ -255,6 +255,9 @@ img { display: block; max-width: 100%; }
 .catalogue-cover-title .cover-year__text {
   color: inherit;
   transform: none;
+  display: inline-block;
+  font-size: 1.15em;
+  line-height: 1;
 }
 
 .catalogue-cover-title .cover-title-mark {
@@ -675,6 +678,18 @@ img { display: block; max-width: 100%; }
   letter-spacing: 0.01em;
   color: inherit;
   opacity: 0.85;
+  display: inline-block;
+  transform-origin: center;
+}
+
+@keyframes menu-card-count-zoom {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.45); }
+  100% { transform: scale(1); }
+}
+
+.menu-card__count.is-zooming {
+  animation: menu-card-count-zoom 0.7s ease-in-out;
 }
 
 .menu-card--page2-02 .menu-card__count,
@@ -856,6 +871,7 @@ img { display: block; max-width: 100%; }
 
 .section-hero__image {
   width: min(1280px, 100%);
+  height: 250px;
   margin: -40px auto 26px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.18);
@@ -878,12 +894,17 @@ img { display: block; max-width: 100%; }
 
 .section-hero__image img {
   display: block;
+  position: absolute;
+  top: -50px;
+  left: 0;
   width: 100%;
-  height: 250px;
+  height: calc(100% + 100px);
   object-fit: cover;
   object-position: center 35%;
   opacity: 1;
   transition: none;
+  will-change: transform;
+  will-change: transform;
 }
 
 /* Cadrage des grandes images de section pour garder les visages visibles. */
@@ -967,6 +988,12 @@ img { display: block; max-width: 100%; }
   transform: translateY(0);
 }
 
+.item-card:not(.is-loading):hover,
+.item-card:not(.is-loading):focus-within {
+  transform: translateY(-6px);
+  box-shadow: 0 16px 30px rgba(13, 35, 58, 0.16);
+}
+
 .item-card.is-info-open {
   overflow: visible;
   z-index: 80;
@@ -1022,11 +1049,15 @@ img { display: block; max-width: 100%; }
 }
 
 .item-card .item-media img {
+  position: absolute;
+  top: -20px;
+  left: 0;
   width: 100%;
-  height: 100%;
+  height: calc(100% + 40px);
   object-fit: cover;
   opacity: 0;
   transition: opacity 0.3s ease;
+  will-change: transform;
 }
 
 .item-card .item-media img.is-loaded {
@@ -1114,7 +1145,8 @@ html.accessibility-mode .item-card .item-media.is-description-visible .item-medi
 }
 
 .item-footer {
-  margin-top: 18px;
+  margin-top: auto;
+  padding-top: 18px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -2284,7 +2316,7 @@ html.is-pdf-exporting .item-card.is-loading .item-content .item-footer > * {
 
 .floating-search.is-visible {
   opacity: 1 !important;
-  transform: translateY(0) scale(1) !important;
+  transform: none !important;
   pointer-events: auto !important;
   transition: none !important;
 }
@@ -2387,6 +2419,12 @@ html.is-pdf-exporting .item-card.is-loading .item-content .item-footer > * {
 
 .floating-search.is-open .floating-search__panel {
   display: block;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  right: auto;
+  transform: translate(-50%, -50%);
+  z-index: 1002;
 }
 
 .floating-search__input {
@@ -2454,7 +2492,7 @@ html.is-pdf-exporting .item-card.is-loading .item-content .item-footer > * {
 
 .floating-section-menu.is-visible {
   opacity: 1 !important;
-  transform: translateY(0) scale(1) !important;
+  transform: none !important;
   pointer-events: auto !important;
   transition: none !important;
 }
@@ -2476,6 +2514,11 @@ html.is-pdf-exporting .item-card.is-loading .item-content .item-footer > * {
 
 .floating-section-menu.is-visible .floating-section-menu__list.is-open {
   display: grid;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  right: auto;
+  transform: translate(-50%, -50%);
 }
 
 .section-transition-overlay {
@@ -2516,12 +2559,6 @@ html.is-pdf-exporting .item-card.is-loading .item-content .item-footer > * {
 .section-transition-overlay.is-active {
   opacity: 1;
   pointer-events: none;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .floating-section-menu:not(.is-closed):hover .floating-section-menu__list {
-    display: grid;
-  }
 }
 
 .admin-bar {

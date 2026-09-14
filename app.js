@@ -1651,6 +1651,30 @@ function bindGlobalActions() {
     menuCardObserver.observe(card);
   });
 
+  // Randomly pulses one "N courses" badge at a time, cycling through every card in a shuffled order before repeating.
+  let menuCountQueue = [];
+  const scheduleMenuCountZoom = () => {
+    const counts = [...document.querySelectorAll('.menu-card__count')];
+    if (!counts.length) return;
+    if (!menuCountQueue.length) {
+      menuCountQueue = counts;
+      for (let i = menuCountQueue.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [menuCountQueue[i], menuCountQueue[j]] = [menuCountQueue[j], menuCountQueue[i]];
+      }
+    }
+    const nextDelay = 1200 + Math.random() * 2600;
+    window.setTimeout(() => {
+      const badge = menuCountQueue.shift();
+      if (badge && badge.isConnected) {
+        badge.classList.add('is-zooming');
+        badge.addEventListener('animationend', () => badge.classList.remove('is-zooming'), { once: true });
+      }
+      scheduleMenuCountZoom();
+    }, nextDelay);
+  };
+  scheduleMenuCountZoom();
+
   const sectionHeroObserver = new IntersectionObserver((entries, observer) => {
     entries.forEach((entry) => {
       if (!entry.isIntersecting) return;
@@ -1660,6 +1684,28 @@ function bindGlobalActions() {
   }, { rootMargin: '100px 0px', threshold: 0.05 });
 
   document.querySelectorAll('.section-hero').forEach((hero) => sectionHeroObserver.observe(hero));
+
+  // Parallax: maps each image's full transit through the viewport (bottom-in to top-out) to a linear px shift,
+  // so the motion is visible throughout the scroll instead of saturating near the middle.
+  // On desktop the real scrolling happens inside .menu-page / .section-page (not window), so listen on all of them.
+  const parallaxItems = [
+    ...[...document.querySelectorAll('.section-hero__image img')].map((img) => ({ img, maxOffset: 50 })),
+    ...[...document.querySelectorAll('.item-card .item-media img')].map((img) => ({ img, maxOffset: 20 }))
+  ];
+  const parallaxScrollTargets = [window, document.querySelector('.menu-page'), document.querySelector('.section-page')].filter(Boolean);
+  const updateHeroParallax = () => {
+    parallaxItems.forEach(({ img, maxOffset }) => {
+      const rect = img.parentElement.getBoundingClientRect();
+      if (rect.bottom < 0 || rect.top > window.innerHeight) return;
+      const totalTravel = window.innerHeight + rect.height;
+      const progress = (window.innerHeight - rect.top) / totalTravel;
+      const offset = (progress - 0.5) * maxOffset * 2;
+      img.style.transform = `translateY(${offset}px)`;
+    });
+  };
+  parallaxScrollTargets.forEach((target) => target.addEventListener('scroll', updateHeroParallax, { passive: true }));
+  window.addEventListener('resize', updateHeroParallax);
+  updateHeroParallax();
 
   const navigateToSection = (targetId) => {
     const target = document.getElementById(targetId);
@@ -1740,9 +1786,6 @@ function bindGlobalActions() {
   const transitionOverlay = document.querySelector('.section-transition-overlay');
   let overlayScrollTimer;
   let overlayScrollListener;
-  let hamburgerHovered = false;
-  let searchHovered = false;
-  let hamburgerHoverCloseTimer;
 
   const closeFloatingModalsOnScroll = () => {
     const menuList = floatingMenu?.querySelector('.floating-section-menu__list');
@@ -1756,8 +1799,6 @@ function bindGlobalActions() {
     floatingSearch?.classList.remove('is-open');
     floatingSearch?.setAttribute('data-clicked-open', 'false');
     floatingSearch?.querySelector('.floating-search__toggle')?.setAttribute('aria-expanded', 'false');
-    hamburgerHovered = false;
-    searchHovered = false;
     transitionOverlay?.classList.remove('is-active');
     updateTransitionOverlay();
   };
@@ -1767,7 +1808,7 @@ function bindGlobalActions() {
   const updateTransitionOverlay = () => {
     const modalIsOpen = floatingMenu?.querySelector('.section-menu-list.is-open') || floatingSearch?.classList.contains('is-open');
     const farewellIsActive = transitionOverlay?.classList.contains('is-farewell');
-    transitionOverlay?.classList.toggle('is-active', Boolean(modalIsOpen || overlayScrollListener || hamburgerHovered || searchHovered || farewellIsActive));
+    transitionOverlay?.classList.toggle('is-active', Boolean(modalIsOpen || overlayScrollListener || farewellIsActive));
   };
 
   const holdOverlayAfterScroll = () => {
@@ -1796,11 +1837,12 @@ function bindGlobalActions() {
       floatingMenu.classList.toggle('is-visible', isVisible);
       floatingSearch?.classList.toggle('is-visible', isVisible);
       floatingMenu.style.opacity = isVisible ? '1' : '0';
-      floatingMenu.style.transform = isVisible ? 'translateY(0) scale(1)' : 'translateY(-14px) scale(0.92)';
+      // transform must be 'none' (not an identity transform) or it creates a containing block that breaks the centered fixed panel
+      floatingMenu.style.transform = isVisible ? 'none' : 'translateY(-14px) scale(0.92)';
       floatingMenu.style.pointerEvents = isVisible ? 'auto' : 'none';
       if (floatingSearch) {
         floatingSearch.style.opacity = isVisible ? '1' : '0';
-        floatingSearch.style.transform = isVisible ? 'translateY(0) scale(1)' : 'translateY(-14px) scale(0.92)';
+        floatingSearch.style.transform = isVisible ? 'none' : 'translateY(-14px) scale(0.92)';
         floatingSearch.style.pointerEvents = isVisible ? 'auto' : 'none';
       }
     };
@@ -1808,27 +1850,6 @@ function bindGlobalActions() {
     updateFloatingMenu();
     window.requestAnimationFrame(updateFloatingMenu);
   }
-
-  floatingMenu?.addEventListener('mouseenter', () => {
-    window.clearTimeout(hamburgerHoverCloseTimer);
-    hamburgerHovered = true;
-    const list = floatingMenu.querySelector('.floating-section-menu__list');
-    const toggle = floatingMenu.querySelector('.floating-section-menu__toggle');
-    list?.classList.add('is-open');
-    toggle?.setAttribute('aria-expanded', 'true');
-    updateTransitionOverlay();
-  });
-
-  floatingMenu?.addEventListener('mouseleave', () => {
-    if (floatingMenu.dataset.clickedOpen !== 'true') {
-      hamburgerHoverCloseTimer = window.setTimeout(() => {
-        hamburgerHovered = false;
-        floatingMenu.querySelector('.floating-section-menu__list')?.classList.remove('is-open');
-        floatingMenu.querySelector('.floating-section-menu__toggle')?.setAttribute('aria-expanded', 'false');
-        updateTransitionOverlay();
-      }, 500);
-    }
-  });
 
   document.querySelectorAll('[data-target]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -1851,16 +1872,6 @@ function bindGlobalActions() {
   });
 
   document.querySelectorAll('.section-menu-toggle').forEach((toggle) => {
-    if (toggle.closest('.floating-section-menu')) {
-      toggle.addEventListener('mouseenter', () => {
-        hamburgerHovered = true;
-        updateTransitionOverlay();
-      });
-      toggle.addEventListener('mouseleave', () => {
-        hamburgerHovered = false;
-        updateTransitionOverlay();
-      });
-    }
     toggle.addEventListener('click', () => {
       const menu = toggle.nextElementSibling;
       toggle.closest('.floating-section-menu')?.classList.remove('is-closed');
@@ -1913,41 +1924,6 @@ function bindGlobalActions() {
     const results = [...search.querySelectorAll('.search-result')];
     const empty = search.querySelector('.floating-search__empty');
     const sectionPages = [...document.querySelectorAll('.section-page')];
-    let searchHoverCloseTimer;
-
-    const closeSearchAfterHover = () => {
-      window.clearTimeout(searchHoverCloseTimer);
-      searchHoverCloseTimer = window.setTimeout(() => {
-        if (search.dataset.clickedOpen === 'true' || search.matches(':hover')) return;
-        searchHovered = false;
-        search.classList.remove('is-open');
-        toggle?.setAttribute('aria-expanded', 'false');
-        updateTransitionOverlay();
-      }, 500);
-    };
-
-    toggle?.addEventListener('mouseenter', () => {
-      window.clearTimeout(searchHoverCloseTimer);
-      searchHovered = true;
-      search.classList.add('is-open');
-      toggle?.setAttribute('aria-expanded', 'true');
-      updateTransitionOverlay();
-    });
-
-    toggle?.addEventListener('mouseleave', () => {
-      if (search.dataset.clickedOpen !== 'true') closeSearchAfterHover();
-    });
-
-    const searchPanel = search.querySelector('.floating-search__panel');
-    searchPanel?.addEventListener('mouseenter', () => {
-      window.clearTimeout(searchHoverCloseTimer);
-      if (search.dataset.clickedOpen !== 'true') searchHovered = true;
-      updateTransitionOverlay();
-    });
-
-    searchPanel?.addEventListener('mouseleave', () => {
-      if (search.dataset.clickedOpen !== 'true') closeSearchAfterHover();
-    });
 
     const getCurrentSectionIndex = () => {
       const marker = window.scrollY + 180;
